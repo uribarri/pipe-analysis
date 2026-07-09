@@ -603,12 +603,15 @@ function rebuildInputTables() {
     
     for (let secId in modelState.sections) {
         let sec = modelState.sections[secId];
+        let odNum = parseFloat(sec.OD) || 0;
+        let thkNum = parseFloat(sec.wall_thickness) || 0;
+        let fluidNum = parseFloat(sec.fluid_density) || 0;
         secTableBody.innerHTML += `
             <tr>
                 <td>${secId}</td>
-                <td>${sec.OD.toFixed(3)}</td>
-                <td>${sec.wall_thickness.toFixed(3)}</td>
-                <td>${sec.fluid_density.toFixed(1)}</td>
+                <td>${odNum.toFixed(3)}</td>
+                <td>${thkNum.toFixed(3)}</td>
+                <td>${fluidNum.toFixed(1)}</td>
                 <td class="actions-col">
                     <button class="btn-danger" onclick="deleteSection('${secId}')"><i class="fa-solid fa-trash"></i></button>
                 </td>
