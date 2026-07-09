@@ -711,8 +711,8 @@ class FEASolver {
             elementStresses[elem.id] = {
                 type: elem.type || 'pipe',
                 k_factor: elem.k_factor,
-                SIF_in: elem.i_i,
-                SIF_out: elem.i_o,
+                SIF_in: Math.max(elem.i_i_A || 1.0, elem.i_i_B || 1.0),
+                SIF_out: Math.max(elem.i_o_A || 1.0, elem.i_o_B || 1.0),
                 sustained_stress: comp.S_L,
                 sustained_allowable: comp.S_L_allowable,
                 sustained_ratio: comp.S_L_ratio,
