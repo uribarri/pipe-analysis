@@ -149,8 +149,9 @@ function render3DModel() {
     modelState.elements.forEach(elem => {
         if (String(elem.node_A) === String(elem.node_B) && elem.type === 'bend') {
             let sec = modelState.sections[elem.section];
-            let od = sec ? parseFloat(sec.OD) : 0.1143;
-            bendAtNode[String(elem.node_A)] = parseFloat(elem.bend_radius) || (1.5 * od);
+            let od = sec ? parseFloat(sec.OD) : 4.5;
+            let r_in = parseFloat(elem.bend_radius) || (1.5 * od);
+            bendAtNode[String(elem.node_A)] = r_in / 12.0; // Convert to feet
         }
     });
 
@@ -163,7 +164,7 @@ function render3DModel() {
         if (!p1 || !p2) return;
         
         const sec = modelState.sections[elem.section];
-        const pipeRadius = sec ? parseFloat(sec.OD) / 2.0 : 0.05;
+        const pipeRadius = sec ? (parseFloat(sec.OD) / 12.0) / 2.0 : 0.1875;
         
         // Color mapping based on results
         let pipeColor = 0x6366f1; // Default Indigo
@@ -224,7 +225,7 @@ function render3DModel() {
             
             // Draw Flange Ring (thick disk)
             const flangeRadius = pipeRadius * 1.5;
-            const flangeLength = Math.min(shiftedLen * 0.15, 0.05);
+            const flangeLength = Math.min(shiftedLen * 0.15, pipeRadius * 0.4);
             const flangeMat = new THREE.MeshStandardMaterial({ color: 0x9ca3af, roughness: 0.3, metalness: 0.9 });
             const flangeMesh = new THREE.Mesh(new THREE.CylinderGeometry(flangeRadius, flangeRadius, flangeLength, 16), flangeMat);
             flangeMesh.position.copy(pipeMesh.position);
@@ -256,7 +257,7 @@ function render3DModel() {
             
             // Draw Double Cone (bowtie valve body)
             const coneRadius = pipeRadius * 1.6;
-            const coneHeight = Math.min(shiftedLen * 0.3, 0.25);
+            const coneHeight = Math.min(shiftedLen * 0.3, pipeRadius * 1.5);
             const cone1Geo = new THREE.ConeGeometry(coneRadius, coneHeight, 16);
             const cone2Geo = new THREE.ConeGeometry(coneRadius, coneHeight, 16);
             const valveMat = new THREE.MeshStandardMaterial({ color: 0x374151, roughness: 0.4, metalness: 0.8 });
@@ -321,7 +322,7 @@ function render3DModel() {
         if (!p) return;
         
         const sec = modelState.sections[elem.section];
-        const pipeRadius = sec ? parseFloat(sec.OD) / 2.0 : 0.05;
+        const pipeRadius = sec ? (parseFloat(sec.OD) / 12.0) / 2.0 : 0.1875;
         
         let dirNorm = new THREE.Vector3(0, 1, 0); // Default vertical
         // Find direction of connected pipes
@@ -337,7 +338,7 @@ function render3DModel() {
         const up = new THREE.Vector3(0, 1, 0);
         
         if (elem.type === 'flange') {
-            const flangeMesh = new THREE.Mesh(new THREE.CylinderGeometry(pipeRadius * 1.5, pipeRadius * 1.5, 0.05, 16), new THREE.MeshStandardMaterial({ color: 0x9ca3af, roughness: 0.3, metalness: 0.9 }));
+            const flangeMesh = new THREE.Mesh(new THREE.CylinderGeometry(pipeRadius * 1.5, pipeRadius * 1.5, pipeRadius * 0.4, 16), new THREE.MeshStandardMaterial({ color: 0x9ca3af, roughness: 0.3, metalness: 0.9 }));
             flangeMesh.position.copy(p);
             flangeMesh.quaternion.setFromUnitVectors(up, dirNorm);
             pipeGroup.add(flangeMesh);
@@ -351,10 +352,11 @@ function render3DModel() {
             
         } else if (elem.type === 'valve') {
             const valveMat = new THREE.MeshStandardMaterial({ color: 0x374151, roughness: 0.4, metalness: 0.8 });
-            const cone1 = new THREE.Mesh(new THREE.ConeGeometry(pipeRadius * 1.6, 0.2, 16), valveMat);
-            const cone2 = new THREE.Mesh(new THREE.ConeGeometry(pipeRadius * 1.6, 0.2, 16), valveMat);
-            cone1.position.copy(p).addScaledVector(dirNorm, -0.1);
-            cone2.position.copy(p).addScaledVector(dirNorm, 0.1);
+            const valveLength = pipeRadius * 2.0;
+            const cone1 = new THREE.Mesh(new THREE.ConeGeometry(pipeRadius * 1.6, valveLength / 2.0, 16), valveMat);
+            const cone2 = new THREE.Mesh(new THREE.ConeGeometry(pipeRadius * 1.6, valveLength / 2.0, 16), valveMat);
+            cone1.position.copy(p).addScaledVector(dirNorm, -valveLength / 4.0);
+            cone2.position.copy(p).addScaledVector(dirNorm, valveLength / 4.0);
             cone1.quaternion.setFromUnitVectors(up, dirNorm);
             cone2.quaternion.setFromUnitVectors(up, dirNorm.clone().negate());
             pipeGroup.add(cone1); pipeGroup.add(cone2);
@@ -519,11 +521,11 @@ function rebuildInputTables() {
     elemTableBody.innerHTML = "";
     modelState.elements.forEach(el => {
         let typeText = el.type;
-        if (el.type === 'bend') typeText = `Bend (R=${el.bend_radius}m)`;
-        else if (el.type === 'valve') typeText = `Valve (${el.weight}kg)`;
-        else if (el.type === 'flange') typeText = `Flange (${el.weight}kg)`;
-        else if (el.type === 'tee') typeText = `Tee (${el.weight}kg)`;
-        else if (el.type === 'hose') typeText = `Hose (Ax=${(el.k_ax/1e6).toFixed(1)}M)`;
+        if (el.type === 'bend') typeText = `Bend (R=${el.bend_radius}in)`;
+        else if (el.type === 'valve') typeText = `Valve (${el.weight}lb)`;
+        else if (el.type === 'flange') typeText = `Flange (${el.weight}lb)`;
+        else if (el.type === 'tee') typeText = `Tee (${el.weight}lb)`;
+        else if (el.type === 'hose') typeText = `Hose (Ax=${el.k_ax} lb/in)`;
         else typeText = 'Pipe';
         elemTableBody.innerHTML += `
             <tr>
@@ -551,9 +553,9 @@ function rebuildInputTables() {
         matTableBody.innerHTML += `
             <tr>
                 <td>${matId}</td>
-                <td>${(mat.E / 1e9).toFixed(1)}</td>
-                <td>${(mat.Sc / 1e6).toFixed(1)}</td>
-                <td>${(mat.Sh / 1e6).toFixed(1)}</td>
+                <td>${(mat.E / 1e6).toFixed(1)}</td>
+                <td>${mat.Sc.toFixed(0)}</td>
+                <td>${mat.Sh.toFixed(0)}</td>
                 <td class="actions-col">
                     <button class="btn-danger" onclick="deleteMaterial('${matId}')"><i class="fa-solid fa-trash"></i></button>
                 </td>
@@ -573,8 +575,8 @@ function rebuildInputTables() {
         secTableBody.innerHTML += `
             <tr>
                 <td>${secId}</td>
-                <td>${sec.OD.toFixed(4)}</td>
-                <td>${sec.wall_thickness.toFixed(5)}</td>
+                <td>${sec.OD.toFixed(3)}</td>
+                <td>${sec.wall_thickness.toFixed(3)}</td>
                 <td>${sec.fluid_density.toFixed(1)}</td>
                 <td class="actions-col">
                     <button class="btn-danger" onclick="deleteSection('${secId}')"><i class="fa-solid fa-trash"></i></button>
@@ -594,7 +596,7 @@ function rebuildInputTables() {
         
         ['tx', 'ty', 'tz'].forEach(dof => {
             if (bc[dof] === true) trans.push(dof.toUpperCase());
-            else if (typeof bc[dof] === 'number') trans.push(`${dof.toUpperCase()}(K=${bc[dof]})`);
+            else if (typeof bc[dof] === 'number') trans.push(`${dof.toUpperCase()}(K=${bc[dof]} lb/in)`);
         });
         ['rx', 'ry', 'rz'].forEach(dof => {
             if (bc[dof] === true) rot.push(dof.toUpperCase());
@@ -777,10 +779,10 @@ function applyMaterialPreset() {
     const val = document.getElementById('material-presets').value;
     
     let presets = {
-        steel_a106: { id: "carbon_steel", E: 2.0e11, G: 7.7e10, alpha: 1.2e-5, yield: 2.5e8, Sc: 1.379e8, Sh: 1.379e8, density: 7850 },
-        ss_tp304: { id: "stainless_304", E: 1.93e11, G: 7.44e10, alpha: 1.6e-5, yield: 2.05e8, Sc: 1.379e8, Sh: 1.296e8, density: 8000 },
-        alloy_p11: { id: "alloy_p11", E: 2.0e11, G: 7.7e10, alpha: 1.25e-5, yield: 2.05e8, Sc: 1.379e8, Sh: 1.379e8, density: 7850 },
-        copper_b88: { id: "copper", E: 1.17e11, G: 4.4e10, alpha: 1.65e-5, yield: 6.2e7, Sc: 6.0e7, Sh: 5.0e7, density: 8900 }
+        steel_a106: { id: "carbon_steel", E: 2.9e7, G: 1.12e7, alpha: 6.5e-6, yield: 35000, Sc: 20000, Sh: 20000, density: 490 },
+        ss_tp304: { id: "stainless_304", E: 2.8e7, G: 1.08e7, alpha: 8.89e-6, yield: 29700, Sc: 20000, Sh: 18800, density: 500 },
+        alloy_p11: { id: "alloy_p11", E: 2.9e7, G: 1.12e7, alpha: 6.94e-6, yield: 30000, Sc: 20000, Sh: 20000, density: 490 },
+        copper_b88: { id: "copper", E: 1.7e7, G: 6.4e6, alpha: 9.17e-6, yield: 9000, Sc: 8700, Sh: 7200, density: 556 }
     };
     
     if (presets[val]) {
@@ -800,24 +802,24 @@ function applySectionPreset() {
     const val = document.getElementById('section-presets').value;
     
     let presets = {
-        "nps_0.5_sch40": { id: "nps_0.5_sch40", OD: 0.02134, t: 0.00277 },
-        "nps_0.5_sch80": { id: "nps_0.5_sch80", OD: 0.02134, t: 0.00373 },
-        "nps_1_sch40": { id: "nps_1_sch40", OD: 0.03340, t: 0.00338 },
-        "nps_1_sch80": { id: "nps_1_sch80", OD: 0.03340, t: 0.00455 },
-        "nps_2_sch40": { id: "nps_2_sch40", OD: 0.06033, t: 0.00391 },
-        "nps_2_sch80": { id: "nps_2_sch80", OD: 0.06033, t: 0.00554 },
-        "nps_3_sch40": { id: "nps_3_sch40", OD: 0.08890, t: 0.00549 },
-        "nps_3_sch80": { id: "nps_3_sch80", OD: 0.08890, t: 0.00762 },
-        "nps_4_sch40": { id: "nps_4_sch40", OD: 0.11430, t: 0.00602 },
-        "nps_4_sch80": { id: "nps_4_sch80", OD: 0.11430, t: 0.00856 },
-        "nps_6_sch40": { id: "nps_6_sch40", OD: 0.16828, t: 0.00711 },
-        "nps_6_sch80": { id: "nps_6_sch80", OD: 0.16828, t: 0.01097 },
-        "nps_8_sch40": { id: "nps_8_sch40", OD: 0.21908, t: 0.00818 },
-        "nps_8_sch80": { id: "nps_8_sch80", OD: 0.21908, t: 0.01270 },
-        "nps_10_sch40": { id: "nps_10_sch40", OD: 0.27305, t: 0.00927 },
-        "nps_10_sch80": { id: "nps_10_sch80", OD: 0.27305, t: 0.01509 },
-        "nps_12_sch40": { id: "nps_12_sch40", OD: 0.32385, t: 0.01031 },
-        "nps_12_sch80": { id: "nps_12_sch80", OD: 0.32385, t: 0.01748 }
+        "nps_0.5_sch40": { id: "nps_0.5_sch40", OD: 0.840, t: 0.109 },
+        "nps_0.5_sch80": { id: "nps_0.5_sch80", OD: 0.840, t: 0.147 },
+        "nps_1_sch40": { id: "nps_1_sch40", OD: 1.315, t: 0.133 },
+        "nps_1_sch80": { id: "nps_1_sch80", OD: 1.315, t: 0.179 },
+        "nps_2_sch40": { id: "nps_2_sch40", OD: 2.375, t: 0.154 },
+        "nps_2_sch80": { id: "nps_2_sch80", OD: 2.375, t: 0.218 },
+        "nps_3_sch40": { id: "nps_3_sch40", OD: 3.500, t: 0.216 },
+        "nps_3_sch80": { id: "nps_3_sch80", OD: 3.500, t: 0.300 },
+        "nps_4_sch40": { id: "nps_4_sch40", OD: 4.500, t: 0.237 },
+        "nps_4_sch80": { id: "nps_4_sch80", OD: 4.500, t: 0.337 },
+        "nps_6_sch40": { id: "nps_6_sch40", OD: 6.625, t: 0.280 },
+        "nps_6_sch80": { id: "nps_6_sch80", OD: 6.625, t: 0.432 },
+        "nps_8_sch40": { id: "nps_8_sch40", OD: 8.625, t: 0.322 },
+        "nps_8_sch80": { id: "nps_8_sch80", OD: 8.625, t: 0.500 },
+        "nps_10_sch40": { id: "nps_10_sch40", OD: 10.750, t: 0.365 },
+        "nps_10_sch80": { id: "nps_10_sch80", OD: 10.750, t: 0.593 },
+        "nps_12_sch40": { id: "nps_12_sch40", OD: 12.750, t: 0.406 },
+        "nps_12_sch80": { id: "nps_12_sch80", OD: 12.750, t: 0.688 }
     };
     
     if (presets[val]) {
@@ -853,7 +855,79 @@ function runAnalysis() {
     console.log("Assembling stiffness matrix and running linear solver...");
     
     try {
-        const solver = new FEASolver(modelState);
+        // Deep copy modelState to convert from English to Metric (SI) for the solver
+        const solverInput = JSON.parse(JSON.stringify(modelState));
+        
+        // 1. Convert Nodes: ft -> m
+        Object.keys(solverInput.nodes).forEach(nid => {
+            solverInput.nodes[nid] = solverInput.nodes[nid].map(x => x * 0.3048);
+        });
+        
+        // 2. Convert Materials: E, G, yield_strength, Sc, Sh (psi -> Pa), alpha (1/F -> 1/C), density (lb/ft³ -> kg/m³)
+        Object.keys(solverInput.materials).forEach(matId => {
+            let mat = solverInput.materials[matId];
+            mat.E = mat.E * 6894.757;
+            mat.G = mat.G * 6894.757;
+            mat.alpha = mat.alpha * 1.8;
+            mat.yield_strength = mat.yield_strength * 6894.757;
+            mat.Sc = mat.Sc * 6894.757;
+            mat.Sh = mat.Sh * 6894.757;
+            mat.density = mat.density * 16.018463;
+        });
+        
+        // 3. Convert Sections: OD, wall_thickness, insulation_thickness (in -> m), densities (lb/ft³ -> kg/m³)
+        Object.keys(solverInput.sections).forEach(secId => {
+            let sec = solverInput.sections[secId];
+            sec.OD = sec.OD * 0.0254;
+            sec.wall_thickness = sec.wall_thickness * 0.0254;
+            sec.fluid_density = sec.fluid_density * 16.018463;
+            sec.insulation_thickness = sec.insulation_thickness * 0.0254;
+            sec.insulation_density = sec.insulation_density * 16.018463;
+        });
+        
+        // 4. Convert Elements: bend_radius (in -> m), weight (lb -> kg), k_ax, k_lat (lb/in -> N/m)
+        solverInput.elements.forEach(elem => {
+            if (elem.type === 'bend') {
+                elem.bend_radius = elem.bend_radius * 0.0254;
+            } else if (elem.type === 'valve' || elem.type === 'flange' || elem.type === 'tee') {
+                elem.weight = elem.weight * 0.45359237;
+            } else if (elem.type === 'hose') {
+                elem.k_ax = elem.k_ax * 175.1268;
+                elem.k_lat = elem.k_lat * 175.1268;
+            }
+        });
+        
+        // 5. Convert Boundary Conditions: tx, ty, tz (lb/in -> N/m)
+        Object.keys(solverInput.boundary_conditions).forEach(nid => {
+            let bc = solverInput.boundary_conditions[nid];
+            ['tx', 'ty', 'tz'].forEach(dof => {
+                if (typeof bc[dof] === 'number') {
+                    bc[dof] = bc[dof] * 175.1268;
+                }
+            });
+        });
+        
+        // 6. Convert Loads: pressure (psi -> Pa), temp change (F -> C), gravity (ft/s² -> m/s²), point loads (lb -> N, ft-lb -> N-m)
+        if (solverInput.loads) {
+            solverInput.loads.global_internal_pressure = (solverInput.loads.global_internal_pressure || 0.0) * 6894.757;
+            solverInput.loads.global_temperature_change = (solverInput.loads.global_temperature_change || 0.0) / 1.8;
+            if (solverInput.loads.global_gravity) {
+                solverInput.loads.global_gravity = solverInput.loads.global_gravity.map(x => x * 0.3048);
+            }
+            if (solverInput.loads.nodes) {
+                Object.keys(solverInput.loads.nodes).forEach(nid => {
+                    let load = solverInput.loads.nodes[nid];
+                    if (load.Fx) load.Fx = load.Fx * 4.4482216;
+                    if (load.Fy) load.Fy = load.Fy * 4.4482216;
+                    if (load.Fz) load.Fz = load.Fz * 4.4482216;
+                    if (load.Mx) load.Mx = load.Mx * 1.355818;
+                    if (load.My) load.My = load.My * 1.355818;
+                    if (load.Mz) load.Mz = load.Mz * 1.355818;
+                });
+            }
+        }
+        
+        const solver = new FEASolver(solverInput);
         solver.solve();
         activeAnalysisResult = solver.getResultsSummary();
         
@@ -913,11 +987,16 @@ function populateResultsDashboard() {
     kpiRatio.innerHTML = maxRatio.toFixed(2);
     kpiRatio.className = "kpi-num " + (maxRatio > 1.0 ? "fail-badge" : "pass-badge");
     
-    document.getElementById('kpi-sus-stress').innerHTML = (maxSusStress / 1e6).toFixed(2) + " MPa";
-    document.getElementById('kpi-sus-allow').innerHTML = "Allowable: " + (maxSusAllow / 1e6).toFixed(2) + " MPa";
+    const maxSusStressPsi = maxSusStress * 0.0001450377;
+    const maxSusAllowPsi = maxSusAllow * 0.0001450377;
+    const maxExpStressPsi = maxExpStress * 0.0001450377;
+    const maxExpAllowPsi = maxExpAllow * 0.0001450377;
     
-    document.getElementById('kpi-exp-stress').innerHTML = (maxExpStress / 1e6).toFixed(2) + " MPa";
-    document.getElementById('kpi-exp-allow').innerHTML = "Allowable: " + (maxExpAllow / 1e6).toFixed(2) + " MPa";
+    document.getElementById('kpi-sus-stress').innerHTML = maxSusStressPsi.toFixed(0) + " psi";
+    document.getElementById('kpi-sus-allow').innerHTML = "Allowable: " + maxSusAllowPsi.toFixed(0) + " psi";
+    
+    document.getElementById('kpi-exp-stress').innerHTML = maxExpStressPsi.toFixed(0) + " psi";
+    document.getElementById('kpi-exp-allow').innerHTML = "Allowable: " + maxExpAllowPsi.toFixed(0) + " psi";
     
     // Element Stress Table
     const stressTableBody = document.querySelector('#table-results-stresses tbody');
@@ -927,14 +1006,17 @@ function populateResultsDashboard() {
         let tag = el.compliance_pass ? '<span class="tag-pass">Pass</span>' : '<span class="tag-fail">Fail</span>';
         let sif_str = `${el.SIF_in.toFixed(2)} / ${el.SIF_out.toFixed(2)}`;
         
+        let susPsi = el.sustained_stress * 0.0001450377;
+        let expPsi = el.expansion_stress * 0.0001450377;
+        
         stressTableBody.innerHTML += `
             <tr>
                 <td>${eid}</td>
                 <td>${el.type.toUpperCase()}</td>
                 <td>${sif_str}</td>
-                <td>${(el.sustained_stress / 1e6).toFixed(2)}</td>
+                <td>${susPsi.toFixed(0)}</td>
                 <td style="color: ${varRatioColor(el.sustained_ratio)}">${el.sustained_ratio.toFixed(2)}</td>
-                <td>${(el.expansion_stress / 1e6).toFixed(2)}</td>
+                <td>${expPsi.toFixed(0)}</td>
                 <td style="color: ${varRatioColor(el.expansion_ratio)}">${el.expansion_ratio.toFixed(2)}</td>
                 <td>${tag}</td>
             </tr>
@@ -952,9 +1034,9 @@ function populateResultsDashboard() {
                 <tr>
                     <td><strong>${nid}</strong></td>
                     <td class="text-secondary">${caseName}</td>
-                    <td>${(d[0]*1000).toFixed(3)}</td>
-                    <td>${(d[1]*1000).toFixed(3)}</td>
-                    <td>${(d[2]*1000).toFixed(3)}</td>
+                    <td>${(d[0]*39.37008).toFixed(3)}</td>
+                    <td>${(d[1]*39.37008).toFixed(3)}</td>
+                    <td>${(d[2]*39.37008).toFixed(3)}</td>
                     <td>${(d[3]*180/Math.PI).toFixed(4)}</td>
                     <td>${(d[4]*180/Math.PI).toFixed(4)}</td>
                     <td>${(d[5]*180/Math.PI).toFixed(4)}</td>
@@ -1037,18 +1119,18 @@ function loadTemplate(name) {
     document.getElementById('overview-prompt').style.display = "flex";
     
     let defaultLoads = {
-        global_gravity: [0.0, -9.81, 0.0],
+        global_gravity: [0.0, -32.2, 0.0],
         global_internal_pressure: 0.0,
         global_temperature_change: 0.0,
         occasional_g: [0.0, 0.0, 0.0]
     };
     
     let defaultMat = {
-        carbon_steel: { E: 2.0e11, G: 7.7e10, alpha: 1.2e-5, yield_strength: 2.5e8, Sc: 1.379e8, Sh: 1.379e8, density: 7850 }
+        carbon_steel: { E: 2.9e7, G: 1.12e7, alpha: 6.5e-6, yield_strength: 35000, Sc: 20000, Sh: 20000, density: 490 }
     };
     
     let defaultSec = {
-        sec1: { OD: 0.1143, wall_thickness: 0.00602, type: 'pipe', fluid_density: 0.0, insulation_thickness: 0.0, insulation_density: 0.0 }
+        sec1: { OD: 4.5, wall_thickness: 0.237, type: 'pipe', fluid_density: 0.0, insulation_thickness: 0.0, insulation_density: 0.0 }
     };
 
     if (name === 'cantilever') {
@@ -1057,7 +1139,7 @@ function loadTemplate(name) {
             sections: {...defaultSec},
             nodes: {
                 "0": [0.0, 0.0, 0.0],
-                "1": [2.0, 0.0, 0.0]
+                "1": [10.0, 0.0, 0.0]
             },
             elements: [
                 { id: 0, node_A: "0", node_B: "1", type: "pipe", material: "carbon_steel", section: "sec1" }
@@ -1068,7 +1150,7 @@ function loadTemplate(name) {
             loads: {
                 ...defaultLoads,
                 nodes: {
-                    "1": { Fx: 0, Fy: -5000, Fz: 0, Mx: 0, My: 0, Mz: 0 }
+                    "1": { Fx: 0, Fy: -1000, Fz: 0, Mx: 0, My: 0, Mz: 0 }
                 }
             }
         };
@@ -1078,12 +1160,12 @@ function loadTemplate(name) {
     } else if (name === 'thermal') {
         modelState = {
             materials: {
-                carbon_steel: { E: 2.0e11, G: 7.7e10, alpha: 1.2e-5, yield_strength: 2.5e8, Sc: 1.379e8, Sh: 1.379e8, density: 0 }
+                carbon_steel: { E: 2.9e7, G: 1.12e7, alpha: 6.5e-6, yield_strength: 35000, Sc: 20000, Sh: 20000, density: 0 }
             },
             sections: {...defaultSec},
             nodes: {
                 "0": [0.0, 0.0, 0.0],
-                "1": [2.0, 0.0, 0.0]
+                "1": [10.0, 0.0, 0.0]
             },
             elements: [
                 { id: 0, node_A: "0", node_B: "1", type: "pipe", material: "carbon_steel", section: "sec1" }
@@ -1094,20 +1176,20 @@ function loadTemplate(name) {
             },
             loads: {
                 ...defaultLoads,
-                global_temperature_change: 100.0
+                global_temperature_change: 212.0
             }
         };
         
     } else if (name === 'lbend') {
         modelState = {
             materials: {
-                carbon_steel: { E: 2.0e11, G: 7.7e10, alpha: 1.2e-5, yield_strength: 2.5e8, Sc: 1.379e8, Sh: 1.379e8, density: 0 }
+                carbon_steel: { E: 2.9e7, G: 1.12e7, alpha: 6.5e-6, yield_strength: 35000, Sc: 20000, Sh: 20000, density: 0 }
             },
             sections: {...defaultSec},
             nodes: {
                 "0": [0.0, 0.0, 0.0],
-                "1": [5.0, 0.0, 0.0],
-                "2": [5.0, 4.0, 0.0]
+                "1": [15.0, 0.0, 0.0],
+                "2": [15.0, 12.0, 0.0]
             },
             elements: [
                 { id: 0, node_A: "0", node_B: "1", type: "pipe", material: "carbon_steel", section: "sec1" },
@@ -1119,29 +1201,29 @@ function loadTemplate(name) {
             },
             loads: {
                 ...defaultLoads,
-                global_temperature_change: 150.0
+                global_temperature_change: 300.0
             }
         };
         
     } else if (name === 'system') {
-        // Detailed 3D loop template
+        // Detailed 3D loop template in customary English units
         modelState = {
             materials: {
-                carbon_steel: { E: 2.0e11, G: 7.7e10, alpha: 1.2e-5, yield_strength: 2.5e8, Sc: 1.379e8, Sh: 1.379e8, density: 7850 }
+                carbon_steel: { E: 2.9e7, G: 1.12e7, alpha: 6.5e-6, yield_strength: 35000, Sc: 20000, Sh: 20000, density: 490 }
             },
             sections: {
-                nps_4: { OD: 0.1143, wall_thickness: 0.00602, type: 'pipe', fluid_density: 1000.0, insulation_thickness: 0.025, insulation_density: 200.0 }
+                nps_4: { OD: 4.5, wall_thickness: 0.237, type: 'pipe', fluid_density: 62.4, insulation_thickness: 1.0, insulation_density: 12.5 }
             },
             nodes: {
                 "0": [0.0, 0.0, 0.0],
-                "1": [3.0, 0.0, 0.0],
-                "2": [3.0, 3.0, 0.0],
-                "3": [5.0, 3.0, 0.0],
-                "4": [5.0, 3.0, 2.0]
+                "1": [10.0, 0.0, 0.0],
+                "2": [10.0, 10.0, 0.0],
+                "3": [16.0, 10.0, 0.0],
+                "4": [16.0, 10.0, 6.0]
             },
             elements: [
                 { id: 0, node_A: "0", node_B: "1", type: "pipe", material: "carbon_steel", section: "nps_4" },
-                { id: 1, node_A: "1", node_B: "2", type: "bend", bend_radius: 0.17145, material: "carbon_steel", section: "nps_4" },
+                { id: 1, node_A: "1", node_B: "2", type: "bend", bend_radius: 6.0, material: "carbon_steel", section: "nps_4" },
                 { id: 2, node_A: "2", node_B: "3", type: "pipe", material: "carbon_steel", section: "nps_4" },
                 { id: 3, node_A: "3", node_B: "4", type: "pipe", material: "carbon_steel", section: "nps_4" }
             ],
@@ -1151,8 +1233,8 @@ function loadTemplate(name) {
             },
             loads: {
                 ...defaultLoads,
-                global_internal_pressure: 2.0e6,
-                global_temperature_change: 130.0
+                global_internal_pressure: 300.0,
+                global_temperature_change: 250.0
             }
         };
     }
@@ -1179,11 +1261,11 @@ function loadTemplate(name) {
     // Adjust camera view fits models
     if (controls) {
         if (name === 'system' || name === 'lbend') {
-            camera.position.set(8, 7, 8);
-            controls.target.set(2.5, 1.5, 0.5);
+            camera.position.set(24, 21, 24);
+            controls.target.set(7.5, 4.5, 1.5);
         } else {
-            camera.position.set(4, 3, 4);
-            controls.target.set(1.0, 0, 0);
+            camera.position.set(12, 9, 12);
+            controls.target.set(3.0, 0, 0);
         }
         controls.update();
     }

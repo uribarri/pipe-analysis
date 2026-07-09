@@ -44,15 +44,15 @@
                                 <input type="text" id="node-id" required placeholder="e.g. 0">
                             </div>
                             <div class="form-field">
-                                <label for="node-x">X (m)</label>
+                                <label for="node-x">X (ft)</label>
                                 <input type="number" id="node-x" step="any" required value="0.0">
                             </div>
                             <div class="form-field">
-                                <label for="node-y">Y (m)</label>
+                                <label for="node-y">Y (ft)</label>
                                 <input type="number" id="node-y" step="any" required value="0.0">
                             </div>
                             <div class="form-field">
-                                <label for="node-z">Z (m)</label>
+                                <label for="node-z">Z (ft)</label>
                                 <input type="number" id="node-z" step="any" required value="0.0">
                             </div>
                         </div>
@@ -66,9 +66,9 @@
                                 <thead>
                                     <tr>
                                         <th>ID</th>
-                                        <th>X (m)</th>
-                                        <th>Y (m)</th>
-                                        <th>Z (m)</th>
+                                        <th>X (ft)</th>
+                                        <th>Y (ft)</th>
+                                        <th>Z (ft)</th>
                                         <th class="actions-col">Actions</th>
                                     </tr>
                                 </thead>
@@ -109,22 +109,22 @@
                                 </select>
                             </div>
                             <div class="form-field" id="bend-radius-field" style="display: none;">
-                                <label for="element-bend-radius">Bend Radius (m)</label>
-                                <input type="number" id="element-bend-radius" step="any" value="0.17145">
+                                <label for="element-bend-radius">Bend Radius (in)</label>
+                                <input type="number" id="element-bend-radius" step="any" value="6.0">
                             </div>
                             <div class="form-field" id="element-weight-field" style="display: none;">
-                                <label for="element-weight">Component Weight (kg)</label>
+                                <label for="element-weight">Component Weight (lb)</label>
                                 <input type="number" id="element-weight" step="any" value="50.0">
                             </div>
                             <div class="form-field" id="element-hose-fields" style="display: none; grid-column: span 2;">
                                 <div class="form-grid" style="padding: 0; border: none; margin: 0; width: 100%;">
                                     <div class="form-field">
-                                        <label for="element-k-ax">Axial Stiffness (N/m)</label>
-                                        <input type="number" id="element-k-ax" value="10000000">
+                                        <label for="element-k-ax">Axial Stiffness (lb/in)</label>
+                                        <input type="number" id="element-k-ax" value="50000">
                                     </div>
                                     <div class="form-field">
-                                        <label for="element-k-lat">Lateral Stiffness (N/m)</label>
-                                        <input type="number" id="element-k-lat" value="100000">
+                                        <label for="element-k-lat">Lateral Stiffness (lb/in)</label>
+                                        <input type="number" id="element-k-lat" value="500">
                                     </div>
                                 </div>
                             </div>
@@ -183,32 +183,32 @@
                                 <input type="text" id="material-id" required value="carbon_steel">
                             </div>
                             <div class="form-field">
-                                <label for="material-e">Young's Modulus E (Pa)</label>
-                                <input type="number" id="material-e" step="any" required value="2.0e11">
+                                <label for="material-e">Young's Modulus E (psi)</label>
+                                <input type="number" id="material-e" step="any" required value="2.9e7">
                             </div>
                             <div class="form-field">
-                                <label for="material-g">Shear Modulus G (Pa)</label>
-                                <input type="number" id="material-g" step="any" required value="7.7e10">
+                                <label for="material-g">Shear Modulus G (psi)</label>
+                                <input type="number" id="material-g" step="any" required value="1.12e7">
                             </div>
                             <div class="form-field">
-                                <label for="material-alpha">CTE alpha (1/C)</label>
-                                <input type="number" id="material-alpha" step="any" required value="1.2e-5">
+                                <label for="material-alpha">CTE alpha (1/°F)</label>
+                                <input type="number" id="material-alpha" step="any" required value="6.5e-6">
                             </div>
                             <div class="form-field">
-                                <label for="material-yield">Yield Strength (Pa)</label>
-                                <input type="number" id="material-yield" step="any" required value="2.5e8">
+                                <label for="material-yield">Yield Strength (psi)</label>
+                                <input type="number" id="material-yield" step="any" required value="35000">
                             </div>
                             <div class="form-field">
-                                <label for="material-sc">Cold Allowable Sc (Pa)</label>
-                                <input type="number" id="material-sc" step="any" required value="1.379e8">
+                                <label for="material-sc">Cold Allowable Sc (psi)</label>
+                                <input type="number" id="material-sc" step="any" required value="20000">
                             </div>
                             <div class="form-field">
-                                <label for="material-sh">Hot Allowable Sh (Pa)</label>
-                                <input type="number" id="material-sh" step="any" required value="1.379e8">
+                                <label for="material-sh">Hot Allowable Sh (psi)</label>
+                                <input type="number" id="material-sh" step="any" required value="20000">
                             </div>
                             <div class="form-field">
-                                <label for="material-density">Density (kg/m³)</label>
-                                <input type="number" id="material-density" step="any" required value="7850">
+                                <label for="material-density">Density (lb/ft³)</label>
+                                <input type="number" id="material-density" step="any" required value="490">
                             </div>
                         </div>
                         <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Add Material</button>
@@ -221,9 +221,9 @@
                                 <thead>
                                     <tr>
                                         <th>ID</th>
-                                        <th>E (GPa)</th>
-                                        <th>Sc (MPa)</th>
-                                        <th>Sh (MPa)</th>
+                                        <th>E (Mpsi)</th>
+                                        <th>Sc (psi)</th>
+                                        <th>Sh (psi)</th>
                                         <th class="actions-col">Actions</th>
                                     </tr>
                                 </thead>
@@ -244,24 +244,24 @@
                                 <label for="section-presets">Section Preset (NPS & Schedule)</label>
                                 <select id="section-presets" onchange="applySectionPreset()">
                                     <option value="custom">-- Custom Section --</option>
-                                    <option value="nps_0.5_sch40">1/2" NPS, Sch 40 (OD: 21.34mm, t: 2.77mm)</option>
-                                    <option value="nps_0.5_sch80">1/2" NPS, Sch 80 (OD: 21.34mm, t: 3.73mm)</option>
-                                    <option value="nps_1_sch40">1" NPS, Sch 40 (OD: 33.40mm, t: 3.38mm)</option>
-                                    <option value="nps_1_sch80">1" NPS, Sch 80 (OD: 33.40mm, t: 4.55mm)</option>
-                                    <option value="nps_2_sch40">2" NPS, Sch 40 (OD: 60.33mm, t: 3.91mm)</option>
-                                    <option value="nps_2_sch80">2" NPS, Sch 80 (OD: 60.33mm, t: 5.54mm)</option>
-                                    <option value="nps_3_sch40">3" NPS, Sch 40 (OD: 88.90mm, t: 5.49mm)</option>
-                                    <option value="nps_3_sch80">3" NPS, Sch 80 (OD: 88.90mm, t: 7.62mm)</option>
-                                    <option value="nps_4_sch40" selected>4" NPS, Sch 40 (OD: 114.30mm, t: 6.02mm)</option>
-                                    <option value="nps_4_sch80">4" NPS, Sch 80 (OD: 114.30mm, t: 8.56mm)</option>
-                                    <option value="nps_6_sch40">6" NPS, Sch 40 (OD: 168.28mm, t: 7.11mm)</option>
-                                    <option value="nps_6_sch80">6" NPS, Sch 80 (OD: 168.28mm, t: 10.97mm)</option>
-                                    <option value="nps_8_sch40">8" NPS, Sch 40 (OD: 219.08mm, t: 8.18mm)</option>
-                                    <option value="nps_8_sch80">8" NPS, Sch 80 (OD: 219.08mm, t: 12.70mm)</option>
-                                    <option value="nps_10_sch40">10" NPS, Sch 40 (OD: 273.05mm, t: 9.27mm)</option>
-                                    <option value="nps_10_sch80">10" NPS, Sch 80 (OD: 273.05mm, t: 15.09mm)</option>
-                                    <option value="nps_12_sch40">12" NPS, Sch 40 (OD: 323.85mm, t: 10.31mm)</option>
-                                    <option value="nps_12_sch80">12" NPS, Sch 80 (OD: 323.85mm, t: 17.48mm)</option>
+                                    <option value="nps_0.5_sch40">1/2" NPS, Sch 40 (OD: 0.840 in, t: 0.109 in)</option>
+                                    <option value="nps_0.5_sch80">1/2" NPS, Sch 80 (OD: 0.840 in, t: 0.147 in)</option>
+                                    <option value="nps_1_sch40">1" NPS, Sch 40 (OD: 1.315 in, t: 0.133 in)</option>
+                                    <option value="nps_1_sch80">1" NPS, Sch 80 (OD: 1.315 in, t: 0.179 in)</option>
+                                    <option value="nps_2_sch40">2" NPS, Sch 40 (OD: 2.375 in, t: 0.154 in)</option>
+                                    <option value="nps_2_sch80">2" NPS, Sch 80 (OD: 2.375 in, t: 0.218 in)</option>
+                                    <option value="nps_3_sch40">3" NPS, Sch 40 (OD: 3.500 in, t: 0.216 in)</option>
+                                    <option value="nps_3_sch80">3" NPS, Sch 80 (OD: 3.500 in, t: 0.300 in)</option>
+                                    <option value="nps_4_sch40" selected>4" NPS, Sch 40 (OD: 4.500 in, t: 0.237 in)</option>
+                                    <option value="nps_4_sch80">4" NPS, Sch 80 (OD: 4.500 in, t: 0.337 in)</option>
+                                    <option value="nps_6_sch40">6" NPS, Sch 40 (OD: 6.625 in, t: 0.280 in)</option>
+                                    <option value="nps_6_sch80">6" NPS, Sch 80 (OD: 6.625 in, t: 0.432 in)</option>
+                                    <option value="nps_8_sch40">8" NPS, Sch 40 (OD: 8.625 in, t: 0.322 in)</option>
+                                    <option value="nps_8_sch80">8" NPS, Sch 80 (OD: 8.625 in, t: 0.500 in)</option>
+                                    <option value="nps_10_sch40">10" NPS, Sch 40 (OD: 10.750 in, t: 0.365 in)</option>
+                                    <option value="nps_10_sch80">10" NPS, Sch 80 (OD: 10.750 in, t: 0.593 in)</option>
+                                    <option value="nps_12_sch40">12" NPS, Sch 40 (OD: 12.750 in, t: 0.406 in)</option>
+                                    <option value="nps_12_sch80">12" NPS, Sch 80 (OD: 12.750 in, t: 0.688 in)</option>
                                 </select>
                             </div>
                             <div class="form-field">
@@ -269,24 +269,24 @@
                                 <input type="text" id="section-id" required value="nps_4_sch40">
                             </div>
                             <div class="form-field">
-                                <label for="section-od">Outer Diameter (m)</label>
-                                <input type="number" id="section-od" step="any" required value="0.1143">
+                                <label for="section-od">Outer Diameter (in)</label>
+                                <input type="number" id="section-od" step="any" required value="4.5">
                             </div>
                             <div class="form-field">
-                                <label for="section-thickness">Wall Thickness (m)</label>
-                                <input type="number" id="section-thickness" step="any" required value="0.00602">
+                                <label for="section-thickness">Wall Thickness (in)</label>
+                                <input type="number" id="section-thickness" step="any" required value="0.237">
                             </div>
                             <div class="form-field">
-                                <label for="section-fluid-density">Fluid Density (kg/m³)</label>
-                                <input type="number" id="section-fluid-density" step="any" required value="1000.0">
+                                <label for="section-fluid-density">Fluid Density (lb/ft³)</label>
+                                <input type="number" id="section-fluid-density" step="any" required value="62.4">
                             </div>
                             <div class="form-field">
-                                <label for="section-ins-thick">Insulation Thickness (m)</label>
-                                <input type="number" id="section-ins-thick" step="any" required value="0.025">
+                                <label for="section-ins-thick">Insulation Thickness (in)</label>
+                                <input type="number" id="section-ins-thick" step="any" required value="1.0">
                             </div>
                             <div class="form-field">
-                                <label for="section-ins-density">Insulation Density (kg/m³)</label>
-                                <input type="number" id="section-ins-density" step="any" required value="200">
+                                <label for="section-ins-density">Insulation Density (lb/ft³)</label>
+                                <input type="number" id="section-ins-density" step="any" required value="12.5">
                             </div>
                         </div>
                         <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Add Section</button>
@@ -299,9 +299,9 @@
                                 <thead>
                                     <tr>
                                         <th>ID</th>
-                                        <th>OD (m)</th>
-                                        <th>Thk (m)</th>
-                                        <th>Fluid (kg/m³)</th>
+                                        <th>OD (in)</th>
+                                        <th>Thk (in)</th>
+                                        <th>Fluid (lb/ft³)</th>
                                         <th class="actions-col">Actions</th>
                                     </tr>
                                 </thead>
@@ -326,17 +326,17 @@
                             <div class="form-field check-field">
                                 <input type="checkbox" id="restraint-tx" onchange="toggleStiffnessField('tx')">
                                 <label for="restraint-tx">Tx (Rigid)</label>
-                                <input type="number" id="restraint-tx-stiff" placeholder="Stiffness (N/m)" class="stiff-input" disabled>
+                                <input type="number" id="restraint-tx-stiff" placeholder="Stiffness (lb/in)" class="stiff-input" disabled>
                             </div>
                             <div class="form-field check-field">
                                 <input type="checkbox" id="restraint-ty" onchange="toggleStiffnessField('ty')">
                                 <label for="restraint-ty">Ty (Rigid)</label>
-                                <input type="number" id="restraint-ty-stiff" placeholder="Stiffness (N/m)" class="stiff-input" disabled>
+                                <input type="number" id="restraint-ty-stiff" placeholder="Stiffness (lb/in)" class="stiff-input" disabled>
                             </div>
                             <div class="form-field check-field">
                                 <input type="checkbox" id="restraint-tz" onchange="toggleStiffnessField('tz')">
                                 <label for="restraint-tz">Tz (Rigid)</label>
-                                <input type="number" id="restraint-tz-stiff" placeholder="Stiffness (N/m)" class="stiff-input" disabled>
+                                <input type="number" id="restraint-tz-stiff" placeholder="Stiffness (lb/in)" class="stiff-input" disabled>
                             </div>
                             <div class="form-field check-field">
                                 <input type="checkbox" id="restraint-rx">
@@ -380,23 +380,23 @@
                     <form id="form-loads" onsubmit="updateLoads(event)" class="input-form">
                         <div class="form-grid">
                             <div class="form-field">
-                                <label for="load-pressure">Design Pressure (Pa)</label>
-                                <input type="number" id="load-pressure" step="any" value="2.0e6">
+                                <label for="load-pressure">Design Pressure (psi)</label>
+                                <input type="number" id="load-pressure" step="any" value="300.0">
                             </div>
                             <div class="form-field">
-                                <label for="load-temp-change">Temp Change delta-T (°C)</label>
-                                <input type="number" id="load-temp-change" step="any" value="130.0">
+                                <label for="load-temp-change">Temp Change delta-T (°F)</label>
+                                <input type="number" id="load-temp-change" step="any" value="250.0">
                             </div>
                             <div class="form-field">
-                                <label for="load-gx">Gravity Gx (m/s²)</label>
+                                <label for="load-gx">Gravity Gx (ft/s²)</label>
                                 <input type="number" id="load-gx" step="any" value="0.0">
                             </div>
                             <div class="form-field">
-                                <label for="load-gy">Gravity Gy (m/s²)</label>
-                                <input type="number" id="load-gy" step="any" value="-9.81">
+                                <label for="load-gy">Gravity Gy (ft/s²)</label>
+                                <input type="number" id="load-gy" step="any" value="-32.2">
                             </div>
                             <div class="form-field">
-                                <label for="load-gz">Gravity Gz (m/s²)</label>
+                                <label for="load-gz">Gravity Gz (ft/s²)</label>
                                 <input type="number" id="load-gz" step="any" value="0.0">
                             </div>
                             <div class="form-field">
@@ -498,13 +498,13 @@
                                 </div>
                                 <div class="dashboard-kpi">
                                     <h4>Sustained Stress Peak</h4>
-                                    <p id="kpi-sus-stress" class="kpi-num">0.00 MPa</p>
-                                    <small id="kpi-sus-allow">Allowable: 137.90 MPa</small>
+                                    <p id="kpi-sus-stress" class="kpi-num">0.00 psi</p>
+                                    <small id="kpi-sus-allow">Allowable: 20000 psi</small>
                                 </div>
                                 <div class="dashboard-kpi">
                                     <h4>Expansion Stress Peak</h4>
-                                    <p id="kpi-exp-stress" class="kpi-num">0.00 MPa</p>
-                                    <small id="kpi-exp-allow">Allowable: 206.85 MPa</small>
+                                    <p id="kpi-exp-stress" class="kpi-num">0.00 psi</p>
+                                    <small id="kpi-exp-allow">Allowable: 30000 psi</small>
                                 </div>
                             </div>
                         </div>
@@ -519,9 +519,9 @@
                                         <th>ID</th>
                                         <th>Type</th>
                                         <th>SIF (In/Out)</th>
-                                        <th>SUS Stress (MPa)</th>
+                                        <th>SUS Stress (psi)</th>
                                         <th>SUS Ratio</th>
-                                        <th>EXP Stress (MPa)</th>
+                                        <th>EXP Stress (psi)</th>
                                         <th>EXP Ratio</th>
                                         <th>Status</th>
                                     </tr>
@@ -541,9 +541,9 @@
                                     <tr>
                                         <th>Node ID</th>
                                         <th>Load Case</th>
-                                        <th>Dx (mm)</th>
-                                        <th>Dy (mm)</th>
-                                        <th>Dz (mm)</th>
+                                        <th>Dx (in)</th>
+                                        <th>Dy (in)</th>
+                                        <th>Dz (in)</th>
                                         <th>Rx (deg)</th>
                                         <th>Ry (deg)</th>
                                         <th>Rz (deg)</th>
