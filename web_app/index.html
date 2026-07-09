@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAEPIPE-Compliant Piping Stress Analyzer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- LEFT COLUMN: Parameter Panels -->
+        <aside class="sidebar-panel">
+            <header class="app-header">
+                <div class="brand">
+                    <i class="fa-solid fa-wind brand-icon"></i>
+                    <div>
+                        <h1>Pipe Stress Analyzer</h1>
+                        <p>ASME B31.3 FEA Solver Engine</p>
+                    </div>
+                </div>
+            </header>
+
+            <nav class="sidebar-tabs">
+                <button class="nav-tab active" onclick="switchSidebarTab('nodes')"><i class="fa-solid fa-location-dot"></i> Nodes</button>
+                <button class="nav-tab" onclick="switchSidebarTab('elements')"><i class="fa-solid fa-grip-lines"></i> Elements</button>
+                <button class="nav-tab" onclick="switchSidebarTab('materials')"><i class="fa-solid fa-atom"></i> Materials</button>
+                <button class="nav-tab" onclick="switchSidebarTab('sections')"><i class="fa-solid fa-ruler-combined"></i> Sections</button>
+                <button class="nav-tab" onclick="switchSidebarTab('restraints')"><i class="fa-solid fa-anchor"></i> Restraints</button>
+                <button class="nav-tab" onclick="switchSidebarTab('loads')"><i class="fa-solid fa-weight-hanging"></i> Loads</button>
+            </nav>
+
+            <div class="sidebar-content">
+                <!-- NODES PANEL -->
+                <section id="panel-nodes" class="tab-panel active">
+                    <div class="form-row">
+                        <h3>Add Node</h3>
+                    </div>
+                    <form id="form-node" onsubmit="addNode(event)" class="input-form">
+                        <div class="form-grid">
+                            <div class="form-field">
+                                <label for="node-id">Node ID</label>
+                                <input type="text" id="node-id" required placeholder="e.g. 0">
+                            </div>
+                            <div class="form-field">
+                                <label for="node-x">X (m)</label>
+                                <input type="number" id="node-x" step="any" required value="0.0">
+                            </div>
+                            <div class="form-field">
+                                <label for="node-y">Y (m)</label>
+                                <input type="number" id="node-y" step="any" required value="0.0">
+                            </div>
+                            <div class="form-field">
+                                <label for="node-z">Z (m)</label>
+                                <input type="number" id="node-z" step="any" required value="0.0">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Add Node</button>
+                    </form>
+                    
+                    <div class="list-container">
+                        <h3>Node Coordinates List</h3>
+                        <div class="scroll-table-wrapper">
+                            <table id="table-nodes">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>X (m)</th>
+                                        <th>Y (m)</th>
+                                        <th>Z (m)</th>
+                                        <th class="actions-col">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ELEMENTS PANEL -->
+                <section id="panel-elements" class="tab-panel">
+                    <div class="form-row">
+                        <h3>Add Pipe Element</h3>
+                    </div>
+                    <form id="form-element" onsubmit="addElement(event)" class="input-form">
+                        <div class="form-grid">
+                            <div class="form-field">
+                                <label for="element-id">Element ID</label>
+                                <input type="number" id="element-id" required placeholder="0">
+                            </div>
+                            <div class="form-field">
+                                <label for="element-node-a">Node A</label>
+                                <select id="element-node-a" required></select>
+                            </div>
+                            <div class="form-field">
+                                <label for="element-node-b">Node B</label>
+                                <select id="element-node-b" required></select>
+                            </div>
+                            <div class="form-field">
+                                <label for="element-type">Type</label>
+                                <select id="element-type" onchange="toggleElementFields()">
+                                    <option value="pipe">Pipe (Straight)</option>
+                                    <option value="bend">Bend (Elbow)</option>
+                                    <option value="valve">Valve (Rigid)</option>
+                                    <option value="flange">Flange (Rigid)</option>
+                                </select>
+                            </div>
+                            <div class="form-field" id="bend-radius-field" style="display: none;">
+                                <label for="element-bend-radius">Bend Radius (m)</label>
+                                <input type="number" id="element-bend-radius" step="any" value="0.17145">
+                            </div>
+                            <div class="form-field" id="element-weight-field" style="display: none;">
+                                <label for="element-weight">Component Weight (kg)</label>
+                                <input type="number" id="element-weight" step="any" value="50.0">
+                            </div>
+                            <div class="form-field">
+                                <label for="element-material">Material</label>
+                                <select id="element-material" required></select>
+                            </div>
+                            <div class="form-field">
+                                <label for="element-section">Section</label>
+                                <select id="element-section" required></select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Add Element</button>
+                    </form>
+
+                    <div class="list-container">
+                        <h3>Elements List</h3>
+                        <div class="scroll-table-wrapper">
+                            <table id="table-elements">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>A</th>
+                                        <th>B</th>
+                                        <th>Type</th>
+                                        <th>Material</th>
+                                        <th>Section</th>
+                                        <th class="actions-col">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- MATERIALS PANEL -->
+                <section id="panel-materials" class="tab-panel">
+                    <div class="form-row">
+                        <h3>Add Material</h3>
+                    </div>
+                    <form id="form-material" onsubmit="addMaterial(event)" class="input-form">
+                        <div class="form-grid">
+                            <div class="form-field full-width">
+                                <label for="material-presets">Material Preset</label>
+                                <select id="material-presets" onchange="applyMaterialPreset()">
+                                    <option value="custom">-- Custom Material --</option>
+                                    <option value="steel_a106" selected>ASTM A106 Grade B (Carbon Steel)</option>
+                                    <option value="ss_tp304">ASTM A312 TP304 (Stainless Steel)</option>
+                                    <option value="alloy_p11">ASTM A335 P11 (Alloy Steel)</option>
+                                    <option value="copper_b88">Copper (B88)</option>
+                                </select>
+                            </div>
+                            <div class="form-field">
+                                <label for="material-id">Material ID</label>
+                                <input type="text" id="material-id" required value="carbon_steel">
+                            </div>
+                            <div class="form-field">
+                                <label for="material-e">Young's Modulus E (Pa)</label>
+                                <input type="number" id="material-e" step="any" required value="2.0e11">
+                            </div>
+                            <div class="form-field">
+                                <label for="material-g">Shear Modulus G (Pa)</label>
+                                <input type="number" id="material-g" step="any" required value="7.7e10">
+                            </div>
+                            <div class="form-field">
+                                <label for="material-alpha">CTE alpha (1/C)</label>
+                                <input type="number" id="material-alpha" step="any" required value="1.2e-5">
+                            </div>
+                            <div class="form-field">
+                                <label for="material-yield">Yield Strength (Pa)</label>
+                                <input type="number" id="material-yield" step="any" required value="2.5e8">
+                            </div>
+                            <div class="form-field">
+                                <label for="material-sc">Cold Allowable Sc (Pa)</label>
+                                <input type="number" id="material-sc" step="any" required value="1.379e8">
+                            </div>
+                            <div class="form-field">
+                                <label for="material-sh">Hot Allowable Sh (Pa)</label>
+                                <input type="number" id="material-sh" step="any" required value="1.379e8">
+                            </div>
+                            <div class="form-field">
+                                <label for="material-density">Density (kg/m³)</label>
+                                <input type="number" id="material-density" step="any" required value="7850">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Add Material</button>
+                    </form>
+
+                    <div class="list-container">
+                        <h3>Materials List</h3>
+                        <div class="scroll-table-wrapper">
+                            <table id="table-materials">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>E (GPa)</th>
+                                        <th>Sc (MPa)</th>
+                                        <th>Sh (MPa)</th>
+                                        <th class="actions-col">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTIONS PANEL -->
+                <section id="panel-sections" class="tab-panel">
+                    <div class="form-row">
+                        <h3>Add Section Type</h3>
+                    </div>
+                    <form id="form-section" onsubmit="addSection(event)" class="input-form">
+                        <div class="form-grid">
+                            <div class="form-field">
+                                <label for="section-id">Section ID</label>
+                                <input type="text" id="section-id" required value="nps_4_sch40">
+                            </div>
+                            <div class="form-field">
+                                <label for="section-od">Outer Diameter (m)</label>
+                                <input type="number" id="section-od" step="any" required value="0.1143">
+                            </div>
+                            <div class="form-field">
+                                <label for="section-thickness">Wall Thickness (m)</label>
+                                <input type="number" id="section-thickness" step="any" required value="0.00602">
+                            </div>
+                            <div class="form-field">
+                                <label for="section-fluid-density">Fluid Density (kg/m³)</label>
+                                <input type="number" id="section-fluid-density" step="any" required value="1000.0">
+                            </div>
+                            <div class="form-field">
+                                <label for="section-ins-thick">Insulation Thickness (m)</label>
+                                <input type="number" id="section-ins-thick" step="any" required value="0.025">
+                            </div>
+                            <div class="form-field">
+                                <label for="section-ins-density">Insulation Density (kg/m³)</label>
+                                <input type="number" id="section-ins-density" step="any" required value="200">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Add Section</button>
+                    </form>
+
+                    <div class="list-container">
+                        <h3>Sections List</h3>
+                        <div class="scroll-table-wrapper">
+                            <table id="table-sections">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>OD (m)</th>
+                                        <th>Thk (m)</th>
+                                        <th>Fluid (kg/m³)</th>
+                                        <th class="actions-col">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- RESTRAINTS PANEL -->
+                <section id="panel-restraints" class="tab-panel">
+                    <div class="form-row">
+                        <h3>Add Nodal Restraint</h3>
+                    </div>
+                    <form id="form-restraint" onsubmit="addRestraint(event)" class="input-form">
+                        <div class="form-grid">
+                            <div class="form-field full-width">
+                                <label for="restraint-node">Node ID</label>
+                                <select id="restraint-node" required></select>
+                            </div>
+                            <!-- DOFs inputs -->
+                            <div class="form-field check-field">
+                                <input type="checkbox" id="restraint-tx" onchange="toggleStiffnessField('tx')">
+                                <label for="restraint-tx">Tx (Rigid)</label>
+                                <input type="number" id="restraint-tx-stiff" placeholder="Stiffness (N/m)" class="stiff-input" disabled>
+                            </div>
+                            <div class="form-field check-field">
+                                <input type="checkbox" id="restraint-ty" onchange="toggleStiffnessField('ty')">
+                                <label for="restraint-ty">Ty (Rigid)</label>
+                                <input type="number" id="restraint-ty-stiff" placeholder="Stiffness (N/m)" class="stiff-input" disabled>
+                            </div>
+                            <div class="form-field check-field">
+                                <input type="checkbox" id="restraint-tz" onchange="toggleStiffnessField('tz')">
+                                <label for="restraint-tz">Tz (Rigid)</label>
+                                <input type="number" id="restraint-tz-stiff" placeholder="Stiffness (N/m)" class="stiff-input" disabled>
+                            </div>
+                            <div class="form-field check-field">
+                                <input type="checkbox" id="restraint-rx">
+                                <label for="restraint-rx">Rx (Rigid)</label>
+                            </div>
+                            <div class="form-field check-field">
+                                <input type="checkbox" id="restraint-ry">
+                                <label for="restraint-ry">Ry (Rigid)</label>
+                            </div>
+                            <div class="form-field check-field">
+                                <input type="checkbox" id="restraint-rz">
+                                <label for="restraint-rz">Rz (Rigid)</label>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Add Restraint</button>
+                    </form>
+
+                    <div class="list-container">
+                        <h3>Boundary Conditions List</h3>
+                        <div class="scroll-table-wrapper">
+                            <table id="table-restraints">
+                                <thead>
+                                    <tr>
+                                        <th>Node ID</th>
+                                        <th>Translational Restraints</th>
+                                        <th>Rotational Restraints</th>
+                                        <th class="actions-col">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- LOADS PANEL -->
+                <section id="panel-loads" class="tab-panel">
+                    <div class="form-row">
+                        <h3>Operating Loading Parameters</h3>
+                    </div>
+                    <form id="form-loads" onsubmit="updateLoads(event)" class="input-form">
+                        <div class="form-grid">
+                            <div class="form-field">
+                                <label for="load-pressure">Design Pressure (Pa)</label>
+                                <input type="number" id="load-pressure" step="any" value="2.0e6">
+                            </div>
+                            <div class="form-field">
+                                <label for="load-temp-change">Temp Change delta-T (°C)</label>
+                                <input type="number" id="load-temp-change" step="any" value="130.0">
+                            </div>
+                            <div class="form-field">
+                                <label for="load-gx">Gravity Gx (m/s²)</label>
+                                <input type="number" id="load-gx" step="any" value="0.0">
+                            </div>
+                            <div class="form-field">
+                                <label for="load-gy">Gravity Gy (m/s²)</label>
+                                <input type="number" id="load-gy" step="any" value="-9.81">
+                            </div>
+                            <div class="form-field">
+                                <label for="load-gz">Gravity Gz (m/s²)</label>
+                                <input type="number" id="load-gz" step="any" value="0.0">
+                            </div>
+                            <div class="form-field">
+                                <label for="load-seismic-x">Seismic Acceleration Ax (g)</label>
+                                <input type="number" id="load-seismic-x" step="any" value="0.0" placeholder="e.g. 0.1">
+                            </div>
+                            <div class="form-field">
+                                <label for="load-seismic-y">Seismic Acceleration Ay (g)</label>
+                                <input type="number" id="load-seismic-y" step="any" value="0.0">
+                            </div>
+                            <div class="form-field">
+                                <label for="load-seismic-z">Seismic Acceleration Az (g)</label>
+                                <input type="number" id="load-seismic-z" step="any" value="0.0">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save Load Cases</button>
+                    </form>
+                </section>
+            </div>
+            
+            <!-- Bottom action buttons -->
+            <footer class="sidebar-actions">
+                <button class="btn btn-success run-btn" onclick="runAnalysis()"><i class="fa-solid fa-play"></i> Run Analysis</button>
+                <div class="project-io">
+                    <button class="btn btn-secondary" onclick="exportProject()"><i class="fa-solid fa-download"></i> Save Project</button>
+                    <label class="btn btn-secondary text-center" style="cursor: pointer;">
+                        <i class="fa-solid fa-upload"></i> Load Project
+                        <input type="file" id="load-project-file" onchange="loadProject(event)" style="display: none;">
+                    </label>
+                </div>
+                <div class="template-selector">
+                    <label for="benchmark-templates">Load Template:</label>
+                    <select id="benchmark-templates" onchange="loadTemplatePreset()">
+                        <option value="">-- Select Template --</option>
+                        <option value="cantilever">Benchmark 1: Cantilever Beam</option>
+                        <option value="thermal">Benchmark 2: Constrained Expansion</option>
+                        <option value="lbend">Benchmark 3: L-Bend Thermal reactions</option>
+                        <option value="system">Benchmark 4: 3D Piping Loop System</option>
+                    </select>
+                </div>
+            </footer>
+        </aside>
+
+        <!-- RIGHT COLUMN: Viewport & Results Dashboard -->
+        <main class="main-display">
+            <!-- 3D VIEWPORT -->
+            <div class="viewport-card">
+                <div class="viewport-header">
+                    <span class="panel-tag"><i class="fa-solid fa-cubes"></i> 3D Isometric Viewport</span>
+                    <div class="viewport-controls">
+                        <label for="view-state">Shape:</label>
+                        <select id="view-state" onchange="toggleDeformedMesh()">
+                            <option value="original">Original Undeformed Layout</option>
+                            <option value="deformed">Operating Deformed Heatmap</option>
+                        </select>
+                        
+                        <div id="scale-control" style="display: none; align-items: center; gap: 8px;">
+                            <label for="deformation-scale">Scale:</label>
+                            <input type="range" id="deformation-scale" min="1" max="500" value="50" oninput="updateDeformedMesh()">
+                            <span id="scale-value">50x</span>
+                        </div>
+                        
+                        <button class="btn-icon" onclick="resetCamera()" title="Reset Camera"><i class="fa-solid fa-arrows-to-eye"></i></button>
+                    </div>
+                </div>
+                <div id="viewport3d">
+                    <div class="three-loader" id="three-loading">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i> Initializing WebGL Viewport...
+                    </div>
+                </div>
+            </div>
+
+            <!-- RESULTS TAB SYSTEM -->
+            <div class="results-card">
+                <div class="results-header">
+                    <nav class="results-tabs">
+                        <button class="res-tab active" onclick="switchResultsTab('overview')"><i class="fa-solid fa-chart-line"></i> Dashboard</button>
+                        <button class="res-tab" id="stress-tab-btn" onclick="switchResultsTab('stresses')"><i class="fa-solid fa-triangle-exclamation"></i> Element Stress compliance</button>
+                        <button class="res-tab" onclick="switchResultsTab('displacements')"><i class="fa-solid fa-arrows-up-down-left-right"></i> Node Displacements</button>
+                    </nav>
+                    <div id="badge-container">
+                        <span class="badge badge-neutral" id="status-badge">Solve Pending</span>
+                    </div>
+                </div>
+
+                <div class="results-content">
+                    <!-- OVERVIEW DASHBOARD -->
+                    <div id="res-overview" class="res-panel active">
+                        <div class="dashboard-overview">
+                            <div class="overview-prompt" id="overview-prompt">
+                                <i class="fa-solid fa-circle-info"></i>
+                                <p>Click the <strong>Run Analysis</strong> button on the sidebar to solve the finite element equations and generate the stress reports.</p>
+                            </div>
+                            <div class="dashboard-grid" id="dashboard-grid" style="display: none;">
+                                <div class="dashboard-kpi">
+                                    <h4>Max Stress Compliance Ratio</h4>
+                                    <p id="kpi-max-ratio" class="kpi-num">0.00</p>
+                                    <small id="kpi-max-ratio-desc">Ratio of actual stress to allowable limit</small>
+                                </div>
+                                <div class="dashboard-kpi">
+                                    <h4>Sustained Stress Peak</h4>
+                                    <p id="kpi-sus-stress" class="kpi-num">0.00 MPa</p>
+                                    <small id="kpi-sus-allow">Allowable: 137.90 MPa</small>
+                                </div>
+                                <div class="dashboard-kpi">
+                                    <h4>Expansion Stress Peak</h4>
+                                    <p id="kpi-exp-stress" class="kpi-num">0.00 MPa</p>
+                                    <small id="kpi-exp-allow">Allowable: 206.85 MPa</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ELEMENT STRESS TABLE -->
+                    <div id="res-stresses" class="res-panel">
+                        <div class="scroll-table-wrapper select-all-col">
+                            <table id="table-results-stresses">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Type</th>
+                                        <th>SIF (In/Out)</th>
+                                        <th>SUS Stress (MPa)</th>
+                                        <th>SUS Ratio</th>
+                                        <th>EXP Stress (MPa)</th>
+                                        <th>EXP Ratio</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td colspan="8" class="text-center text-muted">Solve analysis to display element stresses.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- NODE DISPLACEMENTS TABLE -->
+                    <div id="res-displacements" class="res-panel">
+                        <div class="scroll-table-wrapper select-all-col">
+                            <table id="table-results-displacements">
+                                <thead>
+                                    <tr>
+                                        <th>Node ID</th>
+                                        <th>Load Case</th>
+                                        <th>Dx (mm)</th>
+                                        <th>Dy (mm)</th>
+                                        <th>Dz (mm)</th>
+                                        <th>Rx (deg)</th>
+                                        <th>Ry (deg)</th>
+                                        <th>Rz (deg)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td colspan="8" class="text-center text-muted">Solve analysis to display node displacements.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="solver.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

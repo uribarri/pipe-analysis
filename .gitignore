@@ -1,0 +1,25 @@
+# Python dependencies
+venv/
+__pycache__/
+*.pyc
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Excel lock files
+.~lock.*
+
+# PyInstaller build files
+build/
+dist/
+*.spec
+
+# Local FEA run output reports
+results_summary.json
+stress_report.html
+stress_report.pdf
+deformation_heatmap.png
+
+# Verification outputs
+verification_results/

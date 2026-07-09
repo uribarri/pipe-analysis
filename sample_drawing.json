@@ -1,0 +1,26 @@
+{
+  "materials": {
+    "mat_id_1": { "E": 2.0e11, "G": 7.7e10, "alpha": 1.2e-5, "yield_strength": 2.5e8 }
+  },
+  "sections": {
+    "sec_id_1": { "OD": 0.1143, "wall_thickness": 0.00602, "type": "pipe" }
+  },
+  "nodes": {
+    "0": [0.0, 0.0, 0.0],
+    "1": [2.0, 0.0, 0.0],
+    "2": [2.0, 1.5, 0.0]
+  },
+  "elements": [
+    { "id": 0, "node_A": 0, "node_B": 1, "material": "mat_id_1", "section": "sec_id_1" },
+    { "id": 1, "node_A": 1, "node_B": 2, "material": "mat_id_1", "section": "sec_id_1" }
+  ],
+  "boundary_conditions": {
+    "0": { "tx": true, "ty": true, "tz": true, "rx": true, "ry": true, "rz": true }
+  },
+  "loads": {
+    "nodes": {
+      "2": { "Fx": 0.0, "Fy": -5000.0, "Fz": 0.0, "Mx": 0.0, "My": 0.0, "Mz": 0.0 }
+    },
+    "global_internal_pressure": 2.0e6
+  }
+}
