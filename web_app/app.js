@@ -406,6 +406,14 @@ function render3DModel() {
             supportGroup.add(mesh);
         }
     });
+
+    // Draw Node Number Labels (High Contrast Badges)
+    Object.keys(modelState.nodes).forEach(nid => {
+        const p = renderNodes[nid];
+        if (!p) return;
+        const labelSprite = createNodeLabelSprite(nid, p);
+        supportGroup.add(labelSprite);
+    });
 }
 
 // Find tangent direction of adjacent elements to build the elbow curvature
@@ -1188,4 +1196,41 @@ function getDirectionAway(el, nid, renderNodes) {
     let p_nid = renderNodes[nid];
     let p_other = renderNodes[otherId];
     return new THREE.Vector3().subVectors(p_other, p_nid).normalize();
+}
+
+function createNodeLabelSprite(text, position) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    
+    // Draw white circular badge with blue border
+    const radius = 22;
+    ctx.beginPath();
+    ctx.arc(32, 32, radius, 0, 2 * Math.PI);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#3b82f6';
+    ctx.stroke();
+    
+    // Draw text inside
+    ctx.font = 'bold 22px Inter, system-ui, sans-serif';
+    ctx.fillStyle = '#1e293b';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, 32, 32);
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    const spriteMat = new THREE.SpriteMaterial({ map: texture, depthTest: false, depthWrite: false });
+    const sprite = new THREE.Sprite(spriteMat);
+    
+    sprite.scale.set(0.3, 0.3, 1);
+    
+    sprite.position.copy(position);
+    sprite.position.y += 0.22;
+    sprite.position.x += 0.12;
+    sprite.renderOrder = 999;
+    
+    return sprite;
 }
