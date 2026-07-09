@@ -617,16 +617,12 @@ function addElement(e) {
         alert("Element ID already exists!");
         return;
     }
-    if (node_A === node_B) {
-        alert("Node A and Node B cannot be the same!");
+    if (node_A === node_B && (type === 'pipe' || type === 'hose')) {
+        alert("Pipes and hoses must connect two different nodes!");
         return;
     }
     
     let elem = { id, node_A, node_B, type, material, section };
-    if (node_A === node_B && type === 'pipe') {
-        alert("Pipe elements must connect two different nodes!");
-        return;
-    }
     
     if (type === 'bend') {
         elem.bend_radius = parseFloat(document.getElementById('element-bend-radius').value);
