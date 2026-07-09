@@ -680,3 +680,31 @@ tr:last-child td {
 ::-webkit-scrollbar-thumb:hover {
     background-color: var(--text-muted);
 }
+
+/* View Plane Controls styling */
+.view-plane-controls {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    display: flex;
+    gap: 6px;
+    z-index: 10;
+}
+.view-plane-controls button {
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: bold;
+    min-width: 38px;
+    opacity: 0.85;
+    background-color: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.view-plane-controls button:hover {
+    opacity: 1;
+    background-color: var(--border-color);
+    color: var(--text-primary);
+}

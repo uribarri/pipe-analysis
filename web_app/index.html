@@ -463,6 +463,12 @@
                     </div>
                 </div>
                 <div id="viewport3d">
+                    <div class="view-plane-controls">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="setViewPlane('x')" title="X-Normal (YZ Plane)">X</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="setViewPlane('y')" title="Y-Normal (XZ Plane)">Y</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="setViewPlane('z')" title="Z-Normal (XY Plane)">Z</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="setViewPlane('iso')" title="Isometric View">ISO</button>
+                    </div>
                     <div class="three-loader" id="three-loading">
                         <i class="fa-solid fa-circle-notch fa-spin"></i> Initializing WebGL Viewport...
                     </div>

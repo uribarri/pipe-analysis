@@ -1367,3 +1367,24 @@ function createAxisLabel(text, color, position) {
     sprite.renderOrder = 1000;
     return sprite;
 }
+
+function setViewPlane(plane) {
+    if (!camera || !controls) return;
+    
+    const target = controls.target.clone();
+    const dist = camera.position.distanceTo(target) || 25.0;
+    
+    if (plane === 'x') {
+        camera.position.set(target.x + dist, target.y, target.z);
+    } else if (plane === 'y') {
+        // Small offset in X to prevent OrbitControls camera-up gimbal lock when looking straight down
+        camera.position.set(target.x + 0.01, target.y + dist, target.z);
+    } else if (plane === 'z') {
+        camera.position.set(target.x, target.y, target.z + dist);
+    } else if (plane === 'iso') {
+        const isoDist = dist / Math.sqrt(3);
+        camera.position.set(target.x + isoDist, target.y + isoDist, target.z + isoDist);
+    }
+    
+    controls.update();
+}
