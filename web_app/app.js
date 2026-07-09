@@ -137,10 +137,22 @@ function render3DModel() {
         renderNodes[nid] = new THREE.Vector3(coords[0], coords[1], coords[2]);
     });
     
-    // Draw pipe elements
+    // Identify bend nodes (Node A === Node B and type === 'bend')
+    const bendAtNode = {};
     modelState.elements.forEach(elem => {
-        const p1 = renderNodes[elem.node_A];
-        const p2 = renderNodes[elem.node_B];
+        if (String(elem.node_A) === String(elem.node_B) && elem.type === 'bend') {
+            let sec = modelState.sections[elem.section];
+            let od = sec ? parseFloat(sec.OD) : 0.1143;
+            bendAtNode[String(elem.node_A)] = parseFloat(elem.bend_radius) || (1.5 * od);
+        }
+    });
+
+    // Draw pipe elements (only where Node A !== Node B)
+    modelState.elements.forEach(elem => {
+        if (String(elem.node_A) === String(elem.node_B)) return; // Skipped, rendered below as point component
+        
+        let p1 = renderNodes[elem.node_A].clone();
+        let p2 = renderNodes[elem.node_B].clone();
         if (!p1 || !p2) return;
         
         const sec = modelState.sections[elem.section];
@@ -162,66 +174,70 @@ function render3DModel() {
             metalness: 0.8
         });
         
+        const direction = new THREE.Vector3().subVectors(p2, p1);
+        const length = direction.length();
+        const dirNorm = direction.clone().normalize();
+        
+        // Shift start/end coordinates if adjacent to node-based bends
+        let R_A = bendAtNode[String(elem.node_A)] || 0.0;
+        let R_B = bendAtNode[String(elem.node_B)] || 0.0;
+        
+        if (R_A > 0 && length > R_A) {
+            p1.addScaledVector(dirNorm, R_A);
+        }
+        if (R_B > 0 && length > R_B) {
+            p2.addScaledVector(dirNorm, -R_B);
+        }
+        
+        const shiftedDir = new THREE.Vector3().subVectors(p2, p1);
+        const shiftedLen = shiftedDir.length();
+        const up = new THREE.Vector3(0, 1, 0);
+        
         if (elem.type === 'bend') {
-            // Draw elbow bend as quadratic Bezier tube
-            // Fallback midpoint control point
+            // Draw elbow bend element as Bezier curve
             let controlPoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
-            
-            // Try to find virtual intersection
             let tangentA = findTangentDirection(elem.node_A, elem.id, renderNodes);
             let tangentB = findTangentDirection(elem.node_B, elem.id, renderNodes);
-            
             if (tangentA && tangentB) {
-                // Approximate control point at intersection of tangents
                 let intersect = intersectLines(p1, tangentA, p2, tangentB);
                 if (intersect) controlPoint = intersect;
             }
-            
             const curve = new THREE.QuadraticBezierCurve3(p1, controlPoint, p2);
             const tubeGeo = new THREE.TubeGeometry(curve, 16, pipeRadius, 12, false);
             const mesh = new THREE.Mesh(tubeGeo, material);
             pipeGroup.add(mesh);
+            
         } else if (elem.type === 'flange') {
             // Draw straight pipe
-            const direction = new THREE.Vector3().subVectors(p2, p1);
-            const length = direction.length();
-            const cylinderGeo = new THREE.CylinderGeometry(pipeRadius, pipeRadius, length, 12);
+            const cylinderGeo = new THREE.CylinderGeometry(pipeRadius, pipeRadius, shiftedLen, 12);
             const pipeMesh = new THREE.Mesh(cylinderGeo, material);
-            pipeMesh.position.copy(p1).add(direction.clone().multiplyScalar(0.5));
-            const up = new THREE.Vector3(0, 1, 0);
-            const dirNorm = direction.clone().normalize();
+            pipeMesh.position.copy(p1).add(shiftedDir.clone().multiplyScalar(0.5));
             pipeMesh.quaternion.setFromUnitVectors(up, dirNorm);
             pipeGroup.add(pipeMesh);
             
             // Draw Flange Ring (thick disk)
             const flangeRadius = pipeRadius * 1.5;
-            const flangeLength = Math.min(length * 0.15, 0.05); // 5cm thick max
-            const flangeGeo = new THREE.CylinderGeometry(flangeRadius, flangeRadius, flangeLength, 16);
-            const flangeMat = new THREE.MeshStandardMaterial({ color: 0x9ca3af, roughness: 0.3, metalness: 0.9 }); // Gray Steel
-            const flangeMesh = new THREE.Mesh(flangeGeo, flangeMat);
+            const flangeLength = Math.min(shiftedLen * 0.15, 0.05);
+            const flangeMat = new THREE.MeshStandardMaterial({ color: 0x9ca3af, roughness: 0.3, metalness: 0.9 });
+            const flangeMesh = new THREE.Mesh(new THREE.CylinderGeometry(flangeRadius, flangeRadius, flangeLength, 16), flangeMat);
             flangeMesh.position.copy(pipeMesh.position);
             flangeMesh.quaternion.copy(pipeMesh.quaternion);
             pipeGroup.add(flangeMesh);
             
         } else if (elem.type === 'valve') {
             // Draw straight pipe
-            const direction = new THREE.Vector3().subVectors(p2, p1);
-            const length = direction.length();
-            const cylinderGeo = new THREE.CylinderGeometry(pipeRadius, pipeRadius, length, 12);
+            const cylinderGeo = new THREE.CylinderGeometry(pipeRadius, pipeRadius, shiftedLen, 12);
             const pipeMesh = new THREE.Mesh(cylinderGeo, material);
-            pipeMesh.position.copy(p1).add(direction.clone().multiplyScalar(0.5));
-            const up = new THREE.Vector3(0, 1, 0);
-            const dirNorm = direction.clone().normalize();
+            pipeMesh.position.copy(p1).add(shiftedDir.clone().multiplyScalar(0.5));
             pipeMesh.quaternion.setFromUnitVectors(up, dirNorm);
             pipeGroup.add(pipeMesh);
             
             // Draw Double Cone (bowtie valve body)
             const coneRadius = pipeRadius * 1.6;
-            const coneHeight = Math.min(length * 0.3, 0.25);
-            
+            const coneHeight = Math.min(shiftedLen * 0.3, 0.25);
             const cone1Geo = new THREE.ConeGeometry(coneRadius, coneHeight, 16);
             const cone2Geo = new THREE.ConeGeometry(coneRadius, coneHeight, 16);
-            const valveMat = new THREE.MeshStandardMaterial({ color: 0x374151, roughness: 0.4, metalness: 0.8 }); // Dark Iron
+            const valveMat = new THREE.MeshStandardMaterial({ color: 0x374151, roughness: 0.4, metalness: 0.8 });
             
             const cone1 = new THREE.Mesh(cone1Geo, valveMat);
             const cone2 = new THREE.Mesh(cone2Geo, valveMat);
@@ -235,65 +251,131 @@ function render3DModel() {
             let q2 = new THREE.Quaternion().setFromUnitVectors(up, dirNorm.clone().negate());
             cone1.quaternion.copy(q1);
             cone2.quaternion.copy(q2);
-            
             pipeGroup.add(cone1);
             pipeGroup.add(cone2);
             
-            // Draw Valve Stem pointing up (+Y)
+            // Valve Stem
             const stemHeight = pipeRadius * 3.0;
             const stemRadius = pipeRadius * 0.25;
-            const stemGeo = new THREE.CylinderGeometry(stemRadius, stemRadius, stemHeight, 8);
-            const stem = new THREE.Mesh(stemGeo, valveMat);
+            const stem = new THREE.Mesh(new THREE.CylinderGeometry(stemRadius, stemRadius, stemHeight, 8), valveMat);
             stem.position.copy(midPoint).y += (coneRadius + stemHeight/2.0);
             pipeGroup.add(stem);
             
-            // Draw Handwheel (torus)
-            const wheelRadius = pipeRadius * 1.2;
-            const wheelTubeRadius = pipeRadius * 0.15;
-            const wheelGeo = new THREE.TorusGeometry(wheelRadius, wheelTubeRadius, 8, 24);
-            const wheelMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.3 }); // Red Handwheel
-            const handwheel = new THREE.Mesh(wheelGeo, wheelMat);
+            // Handwheel
+            const wheelGeo = new THREE.TorusGeometry(pipeRadius * 1.2, pipeRadius * 0.15, 8, 24);
+            const handwheel = new THREE.Mesh(wheelGeo, new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.3 }));
             handwheel.position.copy(stem.position);
             handwheel.position.y += stemHeight/2.0;
+            handwheel.rotation.x = Math.PI / 2.0;
             pipeGroup.add(handwheel);
-        } else if (elem.type === 'hose') {
-            const direction = new THREE.Vector3().subVectors(p2, p1);
-            const length = direction.length();
-            const dirNorm = direction.clone().normalize();
-            const up = new THREE.Vector3(0, 1, 0);
             
+        } else if (elem.type === 'hose') {
             // Draw corrugated bellows
             const numConvolutions = 14;
-            const ringLength = length / numConvolutions;
-            
+            const ringLength = shiftedLen / numConvolutions;
             for (let i = 0; i < numConvolutions; i++) {
                 const isCrest = (i % 2 === 0);
                 const r = isCrest ? pipeRadius * 1.35 : pipeRadius * 0.95;
-                const ringGeo = new THREE.CylinderGeometry(r, r, ringLength * 0.95, 12);
-                
-                const ringMesh = new THREE.Mesh(ringGeo, material);
-                const ringPos = p1.clone().addScaledVector(dirNorm, (i + 0.5) * ringLength);
-                ringMesh.position.copy(ringPos);
-                
+                const ringMesh = new THREE.Mesh(new THREE.CylinderGeometry(r, r, ringLength * 0.95, 12), material);
+                ringMesh.position.copy(p1.clone().addScaledVector(dirNorm, (i + 0.5) * ringLength));
                 ringMesh.quaternion.setFromUnitVectors(up, dirNorm);
                 pipeGroup.add(ringMesh);
             }
+            
         } else {
-            // Draw straight cylinder
-            const direction = new THREE.Vector3().subVectors(p2, p1);
-            const length = direction.length();
-            const cylinderGeo = new THREE.CylinderGeometry(pipeRadius, pipeRadius, length, 12);
-            
-            const mesh = new THREE.Mesh(cylinderGeo, material);
-            
-            // Position and rotate cylinder
-            mesh.position.copy(p1).add(direction.multiplyScalar(0.5));
-            
-            const up = new THREE.Vector3(0, 1, 0);
-            const dirNorm = direction.clone().normalize();
+            // Draw straight pipe cylinder
+            const mesh = new THREE.Mesh(new THREE.CylinderGeometry(pipeRadius, pipeRadius, shiftedLen, 12), material);
+            mesh.position.copy(p1).add(shiftedDir.multiplyScalar(0.5));
             mesh.quaternion.setFromUnitVectors(up, dirNorm);
-            
             pipeGroup.add(mesh);
+        }
+    });
+
+    // Draw point-based Flanges and Valves centered directly at Node A
+    modelState.elements.forEach(elem => {
+        if (String(elem.node_A) !== String(elem.node_B)) return; // Skipped, already rendered as pipe run element
+        
+        const p = renderNodes[elem.node_A];
+        if (!p) return;
+        
+        const sec = modelState.sections[elem.section];
+        const pipeRadius = sec ? parseFloat(sec.OD) / 2.0 : 0.05;
+        
+        let dirNorm = new THREE.Vector3(0, 1, 0); // Default vertical
+        // Find direction of connected pipes
+        let connected = modelState.elements.find(el => 
+            String(el.node_A) !== String(el.node_B) && 
+            (String(el.node_A) === String(elem.node_A) || String(el.node_B) === String(elem.node_A))
+        );
+        if (connected) {
+            let otherId = String(connected.node_A) === String(elem.node_A) ? connected.node_B : connected.node_A;
+            dirNorm.subVectors(renderNodes[otherId], p).normalize();
+        }
+        
+        const up = new THREE.Vector3(0, 1, 0);
+        
+        if (elem.type === 'flange') {
+            const flangeMesh = new THREE.Mesh(new THREE.CylinderGeometry(pipeRadius * 1.5, pipeRadius * 1.5, 0.05, 16), new THREE.MeshStandardMaterial({ color: 0x9ca3af, roughness: 0.3, metalness: 0.9 }));
+            flangeMesh.position.copy(p);
+            flangeMesh.quaternion.setFromUnitVectors(up, dirNorm);
+            pipeGroup.add(flangeMesh);
+            
+        } else if (elem.type === 'valve') {
+            const valveMat = new THREE.MeshStandardMaterial({ color: 0x374151, roughness: 0.4, metalness: 0.8 });
+            const cone1 = new THREE.Mesh(new THREE.ConeGeometry(pipeRadius * 1.6, 0.2, 16), valveMat);
+            const cone2 = new THREE.Mesh(new THREE.ConeGeometry(pipeRadius * 1.6, 0.2, 16), valveMat);
+            cone1.position.copy(p).addScaledVector(dirNorm, -0.1);
+            cone2.position.copy(p).addScaledVector(dirNorm, 0.1);
+            cone1.quaternion.setFromUnitVectors(up, dirNorm);
+            cone2.quaternion.setFromUnitVectors(up, dirNorm.clone().negate());
+            pipeGroup.add(cone1); pipeGroup.add(cone2);
+            
+            // Stem & Handwheel
+            const stem = new THREE.Mesh(new THREE.CylinderGeometry(pipeRadius * 0.25, pipeRadius * 0.25, pipeRadius * 3, 8), valveMat);
+            stem.position.copy(p).y += (pipeRadius * 1.6 + pipeRadius * 1.5);
+            pipeGroup.add(stem);
+            const wheel = new THREE.Mesh(new THREE.TorusGeometry(pipeRadius * 1.2, pipeRadius * 0.15, 8, 24), new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.3 }));
+            wheel.position.copy(stem.position).y += pipeRadius * 1.5;
+            wheel.rotation.x = Math.PI / 2.0;
+            pipeGroup.add(wheel);
+        }
+    });
+
+    // Draw node-based Bends as curved elbows between adjacent runs
+    Object.keys(bendAtNode).forEach(nid => {
+        let R = bendAtNode[nid];
+        let connected = modelState.elements.filter(el => 
+            String(el.node_A) !== String(el.node_B) && 
+            (String(el.node_A) === String(nid) || String(el.node_B) === String(nid))
+        );
+        
+        if (connected.length >= 2) {
+            let el1 = connected[0];
+            let el2 = connected[1];
+            let p_nid = renderNodes[nid];
+            
+            let dir1 = getDirectionAway(el1, nid, renderNodes);
+            let dir2 = getDirectionAway(el2, nid, renderNodes);
+            
+            let p_t1 = p_nid.clone().addScaledVector(dir1, R);
+            let p_t2 = p_nid.clone().addScaledVector(dir2, R);
+            
+            let sec = modelState.sections[el1.section];
+            let pipeRadius = sec ? parseFloat(sec.OD) / 2.0 : 0.05;
+            
+            // Color mapping
+            let bendColor = 0x10b981; 
+            if (activeAnalysisResult && activeAnalysisResult.elements) {
+                let is_fail = false;
+                connected.forEach(el => {
+                    let res = activeAnalysisResult.elements[el.id];
+                    if (res && !res.compliance_pass) is_fail = true;
+                });
+                if (is_fail) bendColor = 0xef4444;
+            }
+            
+            const tubeGeo = new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(p_t1, p_nid, p_t2), 16, pipeRadius, 12, false);
+            pipeGroup.add(new THREE.Mesh(tubeGeo, new THREE.MeshStandardMaterial({ color: bendColor, roughness: 0.2, metalness: 0.8 })));
         }
     });
     
@@ -541,6 +623,11 @@ function addElement(e) {
     }
     
     let elem = { id, node_A, node_B, type, material, section };
+    if (node_A === node_B && type === 'pipe') {
+        alert("Pipe elements must connect two different nodes!");
+        return;
+    }
+    
     if (type === 'bend') {
         elem.bend_radius = parseFloat(document.getElementById('element-bend-radius').value);
     } else if (type === 'valve' || type === 'flange') {
@@ -1066,4 +1153,11 @@ function loadProject(e) {
         }
     };
     reader.readAsText(file);
+}
+
+function getDirectionAway(el, nid, renderNodes) {
+    let otherId = String(el.node_A) === String(nid) ? el.node_B : el.node_A;
+    let p_nid = renderNodes[nid];
+    let p_other = renderNodes[otherId];
+    return new THREE.Vector3().subVectors(p_other, p_nid).normalize();
 }

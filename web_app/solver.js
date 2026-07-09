@@ -61,72 +61,121 @@ class FEASolver {
     }
 
     _calculateElementProperties() {
+        // Find point components (Node A === Node B)
+        let bendAtNode = {};
+        let weightAtNode = {};
+        this.elements.forEach(elem => {
+            if (String(elem.node_A) === String(elem.node_B)) {
+                let sec = this.sections[elem.section];
+                let od = sec ? parseFloat(sec.OD) : 0.1143;
+                if (elem.type === 'bend') {
+                    bendAtNode[String(elem.node_A)] = parseFloat(elem.bend_radius) || (1.5 * od);
+                } else if (elem.type === 'valve' || elem.type === 'flange') {
+                    weightAtNode[String(elem.node_A)] = (weightAtNode[String(elem.node_A)] || 0.0) + parseFloat(elem.weight || 0.0);
+                }
+            }
+        });
+        this.bendAtNode = bendAtNode;
+        this.weightAtNode = weightAtNode;
+
         // Count element connections at each node to identify branches (Tees)
         let nodeElemCount = {};
         this.nodeKeys.forEach(nid => { nodeElemCount[String(nid)] = 0; });
         this.elements.forEach(elem => {
-            nodeElemCount[String(elem.node_A)]++;
-            nodeElemCount[String(elem.node_B)]++;
+            if (String(elem.node_A) !== String(elem.node_B)) {
+                nodeElemCount[String(elem.node_A)]++;
+                nodeElemCount[String(elem.node_B)]++;
+            }
         });
 
         this.elements.forEach(elem => {
             let elemType = elem.type || 'pipe';
             let sec = this.sections[elem.section];
             
-            let k_factor = 1.0;
-            let i_i = 1.0;
-            let i_o = 1.0;
+            // Per-node SIFs
+            elem.i_i_A = 1.0;
+            elem.i_o_A = 1.0;
+            elem.i_i_B = 1.0;
+            elem.i_o_B = 1.0;
+            elem.k_factor = 1.0;
+            
+            if (String(elem.node_A) === String(elem.node_B)) {
+                elem.L = 0.0;
+                return;
+            }
             
             let idx_A = this.nodeIdToIdx[String(elem.node_A)];
             let idx_B = this.nodeIdToIdx[String(elem.node_B)];
-            
             let p1 = this.nodeCoords[idx_A];
             let p2 = this.nodeCoords[idx_B];
             
-            // Chord length
             let dx = p2[0] - p1[0];
             let dy = p2[1] - p1[1];
             let dz = p2[2] - p1[2];
             let L_chord = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            elem.L = L_chord;
             
+            // Check for adjacent node-based bends
+            let R_A = bendAtNode[String(elem.node_A)] || 0.0;
+            let R_B = bendAtNode[String(elem.node_B)] || 0.0;
+            
+            if (R_A > 0) {
+                let r_m = (sec.OD - sec.wall_thickness) / 2.0;
+                let h = (sec.wall_thickness * R_A) / (r_m ** 2);
+                let k = 1.65 / h; if (k < 1.0) k = 1.0;
+                let i_i = 0.9 / (h ** (2.0/3.0)); if (i_i < 1.0) i_i = 1.0;
+                let i_o = 0.75 / (h ** (2.0/3.0)); if (i_o < 1.0) i_o = 1.0;
+                
+                elem.k_factor = Math.max(elem.k_factor, k);
+                elem.i_i_A = i_i;
+                elem.i_o_A = i_o;
+            }
+            if (R_B > 0) {
+                let r_m = (sec.OD - sec.wall_thickness) / 2.0;
+                let h = (sec.wall_thickness * R_B) / (r_m ** 2);
+                let k = 1.65 / h; if (k < 1.0) k = 1.0;
+                let i_i = 0.9 / (h ** (2.0/3.0)); if (i_i < 1.0) i_i = 1.0;
+                let i_o = 0.75 / (h ** (2.0/3.0)); if (i_o < 1.0) i_o = 1.0;
+                
+                elem.k_factor = Math.max(elem.k_factor, k);
+                elem.i_i_B = i_i;
+                elem.i_o_B = i_o;
+            }
+            
+            // Handle element-based bends
             if (elemType === 'bend') {
                 let R = parseFloat(elem.bend_radius) || (1.5 * sec.OD);
                 elem.bend_radius = R;
                 
-                // Bend calculation
                 let r_m = (sec.OD - sec.wall_thickness) / 2.0;
                 let h = (sec.wall_thickness * R) / (r_m ** 2);
                 
-                k_factor = 1.65 / h;
-                if (k_factor < 1.0) k_factor = 1.0;
+                let k = 1.65 / h; if (k < 1.0) k = 1.0;
+                let i_i = 0.9 / (h ** (2.0/3.0)); if (i_i < 1.0) i_i = 1.0;
+                let i_o = 0.75 / (h ** (2.0/3.0)); if (i_o < 1.0) i_o = 1.0;
                 
-                i_i = 0.9 / (h ** (2.0/3.0));
-                if (i_i < 1.0) i_i = 1.0;
-                
-                i_o = 0.75 / (h ** (2.0/3.0));
-                if (i_o < 1.0) i_o = 1.0;
+                elem.k_factor = k;
+                elem.i_i_A = i_i; elem.i_o_A = i_o;
+                elem.i_i_B = i_i; elem.i_o_B = i_o;
                 
                 let theta = (L_chord < 2.0 * R) ? 2.0 * Math.asin(L_chord / (2.0 * R)) : Math.PI / 2.0;
                 elem.L = R * theta;
-            } else if (elemType === 'valve' || elemType === 'flange' || elemType === 'hose') {
-                elem.L = L_chord;
-            } else {
-                // Tee branch check: if node A or B connects to 3 or more elements
+            } else if (elemType === 'pipe') {
+                // Tee check only applies if not adjacent to a bend
                 let is_branch_A = nodeElemCount[String(elem.node_A)] >= 3;
                 let is_branch_B = nodeElemCount[String(elem.node_B)] >= 3;
-                if (is_branch_A || is_branch_B) {
+                
+                if (is_branch_A && R_A === 0) {
                     let h_tee = 4.4 * sec.wall_thickness / sec.OD;
-                    i_i = 0.9 / (h_tee ** (2.0/3.0));
-                    i_o = 0.9 / (h_tee ** (2.0/3.0));
-                    if (i_i < 1.0) i_i = 1.0;
-                    if (i_o < 1.0) i_o = 1.0;
+                    let i = 0.9 / (h_tee ** (2.0/3.0)); if (i < 1.0) i = 1.0;
+                    elem.i_i_A = i; elem.i_o_A = i;
                 }
-                elem.L = L_chord;
+                if (is_branch_B && R_B === 0) {
+                    let h_tee = 4.4 * sec.wall_thickness / sec.OD;
+                    let i = 0.9 / (h_tee ** (2.0/3.0)); if (i < 1.0) i = 1.0;
+                    elem.i_i_B = i; elem.i_o_B = i;
+                }
             }
-            
-            elem.k_factor = k_factor;
-            elem.i_i = i_i;
-            elem.i_o = i_o;
         });
     }
 
@@ -240,6 +289,9 @@ class FEASolver {
         
         // Assemble Element Stiffness Matrices
         this.elements.forEach(elem => {
+            if (String(elem.node_A) === String(elem.node_B)) {
+                return;
+            }
             let idx_A = this.nodeIdToIdx[String(elem.node_A)];
             let idx_B = this.nodeIdToIdx[String(elem.node_B)];
             let p1 = this.nodeCoords[idx_A];
@@ -357,6 +409,27 @@ class FEASolver {
     _getGlobalLoadVector(caseType) {
         let F = new Float64Array(this.numDofs);
         
+        // Apply point component masses (valves/flanges at a single node)
+        if (caseType === 'W') {
+            for (let nid in this.weightAtNode) {
+                let m_comp = this.weightAtNode[nid];
+                let g_global = new Float64Array(this.loads.global_gravity || [0.0, -9.81, 0.0]);
+                let idx = this.nodeIdToIdx[nid];
+                F[idx*6 + 0] += m_comp * g_global[0];
+                F[idx*6 + 1] += m_comp * g_global[1];
+                F[idx*6 + 2] += m_comp * g_global[2];
+            }
+        } else if (caseType === 'U') {
+            for (let nid in this.weightAtNode) {
+                let m_comp = this.weightAtNode[nid];
+                let seismic_g = new Float64Array(this.loads.occasional_g || [0.0, 0.0, 0.0]);
+                let idx = this.nodeIdToIdx[nid];
+                F[idx*6 + 0] += m_comp * seismic_g[0] * 9.81;
+                F[idx*6 + 1] += m_comp * seismic_g[1] * 9.81;
+                F[idx*6 + 2] += m_comp * seismic_g[2] * 9.81;
+            }
+        }
+        
         // Apply nodal point loads (only to Weight case W)
         if (caseType === 'W') {
             let nodeLoads = this.loads.nodes || {};
@@ -374,6 +447,10 @@ class FEASolver {
         
         // Apply element loads (fixed end forces)
         this.elements.forEach(elem => {
+            if (String(elem.node_A) === String(elem.node_B)) {
+                elem['f_fe_' + caseType] = new Float64Array(12);
+                return;
+            }
             let sec = this.sections[elem.section];
             let mat = this.materials[elem.material];
             let T = elem.T;
@@ -480,6 +557,10 @@ class FEASolver {
     _calculateElementLocalForces(u_global, caseType) {
         let f_local_elems = {};
         this.elements.forEach(elem => {
+            if (String(elem.node_A) === String(elem.node_B)) {
+                f_local_elems[elem.id] = new Float64Array(12);
+                return;
+            }
             let u_elem_global = new Float64Array(12);
             for (let i = 0; i < 12; i++) {
                 u_elem_global[i] = u_global[elem.dofs[i]];
@@ -517,8 +598,10 @@ class FEASolver {
             let sec = this.sections[elem.section];
             let mat = this.materials[elem.material];
             
-            let i_i = elem.i_i;
-            let i_o = elem.i_o;
+            let i_i_A = elem.i_i_A || 1.0;
+            let i_o_A = elem.i_o_A || 1.0;
+            let i_i_B = elem.i_i_B || 1.0;
+            let i_o_B = elem.i_o_B || 1.0;
             let A = sec.A;
             let Z = sec.Z;
             let OD = sec.OD;
@@ -530,12 +613,12 @@ class FEASolver {
             let f_w = f_W[elem.id];
             
             // Node A
-            let S_b_w_A = Math.sqrt((i_i * f_w[5])**2 + (i_o * f_w[4])**2) / Z;
+            let S_b_w_A = Math.sqrt((i_i_A * f_w[5])**2 + (i_o_A * f_w[4])**2) / Z;
             let S_a_w_A = Math.abs(f_w[0]) / A;
             let S_L_A = S_b_w_A + S_a_w_A + sigma_pr;
             
             // Node B
-            let S_b_w_B = Math.sqrt((i_i * f_w[11])**2 + (i_o * f_w[10])**2) / Z;
+            let S_b_w_B = Math.sqrt((i_i_B * f_w[11])**2 + (i_o_B * f_w[10])**2) / Z;
             let S_a_w_B = Math.abs(f_w[6]) / A;
             let S_L_B = S_b_w_B + S_a_w_B + sigma_pr;
             
@@ -545,12 +628,12 @@ class FEASolver {
             let f_t = f_T[elem.id];
             
             // Node A
-            let S_b_t_A = Math.sqrt((i_i * f_t[5])**2 + (i_o * f_t[4])**2) / Z;
+            let S_b_t_A = Math.sqrt((i_i_A * f_t[5])**2 + (i_o_A * f_t[4])**2) / Z;
             let S_t_t_A = Math.abs(f_t[3]) / (2.0 * Z);
             let S_E_A = Math.sqrt(S_b_t_A**2 + 4.0 * S_t_t_A**2);
             
             // Node B
-            let S_b_t_B = Math.sqrt((i_i * f_t[11])**2 + (i_o * f_t[10])**2) / Z;
+            let S_b_t_B = Math.sqrt((i_i_B * f_t[11])**2 + (i_o_B * f_t[10])**2) / Z;
             let S_t_t_B = Math.abs(f_t[9]) / (2.0 * Z);
             let S_E_B = Math.sqrt(S_b_t_B**2 + 4.0 * S_t_t_B**2);
             
@@ -564,14 +647,14 @@ class FEASolver {
                 // Node A
                 let M_i_occ_A = Math.abs(f_w[5]) + Math.abs(f_u[5]);
                 let M_o_occ_A = Math.abs(f_w[4]) + Math.abs(f_u[4]);
-                let S_b_occ_A = Math.sqrt((i_i * M_i_occ_A)**2 + (i_o * M_o_occ_A)**2) / Z;
+                let S_b_occ_A = Math.sqrt((i_i_A * M_i_occ_A)**2 + (i_o_A * M_o_occ_A)**2) / Z;
                 let S_a_occ_A = (Math.abs(f_w[0]) + Math.abs(f_u[0])) / A;
                 let S_OL_A = S_b_occ_A + S_a_occ_A + sigma_pr;
                 
                 // Node B
                 let M_i_occ_B = Math.abs(f_w[11]) + Math.abs(f_u[11]);
                 let M_o_occ_B = Math.abs(f_w[10]) + Math.abs(f_u[10]);
-                let S_b_occ_B = Math.sqrt((i_i * M_i_occ_B)**2 + (i_o * M_o_occ_B)**2) / Z;
+                let S_b_occ_B = Math.sqrt((i_i_B * M_i_occ_B)**2 + (i_o_B * M_o_occ_B)**2) / Z;
                 let S_a_occ_B = (Math.abs(f_w[6]) + Math.abs(f_u[6])) / A;
                 let S_OL_B = S_b_occ_B + S_a_occ_B + sigma_pr;
                 
