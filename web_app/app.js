@@ -762,6 +762,38 @@ function applyMaterialPreset() {
     }
 }
 
+function applySectionPreset() {
+    const val = document.getElementById('section-presets').value;
+    
+    let presets = {
+        "nps_0.5_sch40": { id: "nps_0.5_sch40", OD: 0.0213, t: 0.00277 },
+        "nps_0.5_sch80": { id: "nps_0.5_sch80", OD: 0.0213, t: 0.00373 },
+        "nps_1_sch40": { id: "nps_1_sch40", OD: 0.0334, t: 0.00338 },
+        "nps_1_sch80": { id: "nps_1_sch80", OD: 0.0334, t: 0.00455 },
+        "nps_2_sch40": { id: "nps_2_sch40", OD: 0.0603, t: 0.00391 },
+        "nps_2_sch80": { id: "nps_2_sch80", OD: 0.0603, t: 0.00554 },
+        "nps_3_sch40": { id: "nps_3_sch40", OD: 0.0889, t: 0.00549 },
+        "nps_3_sch80": { id: "nps_3_sch80", OD: 0.0889, t: 0.00762 },
+        "nps_4_sch40": { id: "nps_4_sch40", OD: 0.1143, t: 0.00602 },
+        "nps_4_sch80": { id: "nps_4_sch80", OD: 0.1143, t: 0.00856 },
+        "nps_6_sch40": { id: "nps_6_sch40", OD: 0.1683, t: 0.00711 },
+        "nps_6_sch80": { id: "nps_6_sch80", OD: 0.1683, t: 0.01097 },
+        "nps_8_sch40": { id: "nps_8_sch40", OD: 0.2191, t: 0.00818 },
+        "nps_8_sch80": { id: "nps_8_sch80", OD: 0.2191, t: 0.01270 },
+        "nps_10_sch40": { id: "nps_10_sch40", OD: 0.2731, t: 0.00927 },
+        "nps_10_sch80": { id: "nps_10_sch80", OD: 0.2731, t: 0.01509 },
+        "nps_12_sch40": { id: "nps_12_sch40", OD: 0.3239, t: 0.01031 },
+        "nps_12_sch80": { id: "nps_12_sch80", OD: 0.3239, t: 0.01748 }
+    };
+    
+    if (presets[val]) {
+        let p = presets[val];
+        document.getElementById('section-id').value = p.id;
+        document.getElementById('section-od').value = p.OD;
+        document.getElementById('section-thickness').value = p.t;
+    }
+}
+
 function toggleStiffnessField(dof) {
     let checked = document.getElementById(`restraint-${dof}`).checked;
     document.getElementById(`restraint-${dof}-stiff`).disabled = checked;
