@@ -255,8 +255,29 @@ function render3DModel() {
             const handwheel = new THREE.Mesh(wheelGeo, wheelMat);
             handwheel.position.copy(stem.position);
             handwheel.position.y += stemHeight/2.0;
-            handwheel.rotation.x = Math.PI / 2.0;
             pipeGroup.add(handwheel);
+        } else if (elem.type === 'hose') {
+            const direction = new THREE.Vector3().subVectors(p2, p1);
+            const length = direction.length();
+            const dirNorm = direction.clone().normalize();
+            const up = new THREE.Vector3(0, 1, 0);
+            
+            // Draw corrugated bellows
+            const numConvolutions = 14;
+            const ringLength = length / numConvolutions;
+            
+            for (let i = 0; i < numConvolutions; i++) {
+                const isCrest = (i % 2 === 0);
+                const r = isCrest ? pipeRadius * 1.35 : pipeRadius * 0.95;
+                const ringGeo = new THREE.CylinderGeometry(r, r, ringLength * 0.95, 12);
+                
+                const ringMesh = new THREE.Mesh(ringGeo, material);
+                const ringPos = p1.clone().addScaledVector(dirNorm, (i + 0.5) * ringLength);
+                ringMesh.position.copy(ringPos);
+                
+                ringMesh.quaternion.setFromUnitVectors(up, dirNorm);
+                pipeGroup.add(ringMesh);
+            }
         } else {
             // Draw straight cylinder
             const direction = new THREE.Vector3().subVectors(p2, p1);
@@ -382,6 +403,7 @@ function rebuildInputTables() {
         if (el.type === 'bend') typeText = `Bend (R=${el.bend_radius}m)`;
         else if (el.type === 'valve') typeText = `Valve (${el.weight}kg)`;
         else if (el.type === 'flange') typeText = `Flange (${el.weight}kg)`;
+        else if (el.type === 'hose') typeText = `Hose (Ax=${(el.k_ax/1e6).toFixed(1)}M)`;
         else typeText = 'Pipe';
         elemTableBody.innerHTML += `
             <tr>
@@ -523,6 +545,9 @@ function addElement(e) {
         elem.bend_radius = parseFloat(document.getElementById('element-bend-radius').value);
     } else if (type === 'valve' || type === 'flange') {
         elem.weight = parseFloat(document.getElementById('element-weight').value) || 0.0;
+    } else if (type === 'hose') {
+        elem.k_ax = parseFloat(document.getElementById('element-k-ax').value) || 1e7;
+        elem.k_lat = parseFloat(document.getElementById('element-k-lat').value) || 1e5;
     }
     
     modelState.elements.push(elem);
@@ -660,6 +685,7 @@ function toggleElementFields() {
     let type = document.getElementById('element-type').value;
     document.getElementById('bend-radius-field').style.display = type === 'bend' ? 'block' : 'none';
     document.getElementById('element-weight-field').style.display = (type === 'valve' || type === 'flange') ? 'block' : 'none';
+    document.getElementById('element-hose-fields').style.display = type === 'hose' ? 'block' : 'none';
 }
 
 // -------------------------------------------------------------

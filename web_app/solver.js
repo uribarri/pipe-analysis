@@ -108,7 +108,7 @@ class FEASolver {
                 
                 let theta = (L_chord < 2.0 * R) ? 2.0 * Math.asin(L_chord / (2.0 * R)) : Math.PI / 2.0;
                 elem.L = R * theta;
-            } else if (elemType === 'valve' || elemType === 'flange') {
+            } else if (elemType === 'valve' || elemType === 'flange' || elemType === 'hose') {
                 elem.L = L_chord;
             } else {
                 // Tee branch check: if node A or B connects to 3 or more elements
@@ -128,6 +128,30 @@ class FEASolver {
             elem.i_i = i_i;
             elem.i_o = i_o;
         });
+    }
+
+    _getHoseStiffness(k_ax, k_lat, k_rot, k_tor) {
+        let k = Array.from({ length: 12 }, () => new Float64Array(12));
+        
+        // Axial stiffness (dof 0, 6)
+        k[0][0] = k_ax; k[0][6] = -k_ax; k[6][0] = -k_ax; k[6][6] = k_ax;
+        
+        // Lateral stiffness local y (dof 1, 7)
+        k[1][1] = k_lat; k[1][7] = -k_lat; k[7][1] = -k_lat; k[7][7] = k_lat;
+        
+        // Lateral stiffness local z (dof 2, 8)
+        k[2][2] = k_lat; k[2][8] = -k_lat; k[8][2] = -k_lat; k[8][8] = k_lat;
+        
+        // Torsional stiffness (dof 3, 9)
+        k[3][3] = k_tor; k[3][9] = -k_tor; k[9][3] = -k_tor; k[9][9] = k_tor;
+        
+        // Bending stiffness local y (dof 4, 10)
+        k[4][4] = k_rot; k[4][10] = -k_rot; k[10][4] = -k_rot; k[10][10] = k_rot;
+        
+        // Bending stiffness local z (dof 5, 11)
+        k[5][5] = k_rot; k[5][11] = -k_rot; k[11][5] = -k_rot; k[11][11] = k_rot;
+        
+        return k;
     }
 
     _getElementStiffness(E, G, A, Iy, Iz, J, L, k_factor) {
@@ -227,15 +251,23 @@ class FEASolver {
             let sec = this.sections[elem.section];
             let mat = this.materials[elem.material];
             
-            // Scaled rigid stiffness for valve and flange
-            let E_eff = mat.E;
-            let G_eff = mat.G;
-            if (elem.type === 'valve' || elem.type === 'flange') {
-                E_eff *= 100.0;
-                G_eff *= 100.0;
+            let k_local;
+            if (elem.type === 'hose') {
+                let k_ax = parseFloat(elem.k_ax || 1e7);
+                let k_lat = parseFloat(elem.k_lat || 1e5);
+                let k_rot = 100.0;
+                let k_tor = 500.0;
+                k_local = this._getHoseStiffness(k_ax, k_lat, k_rot, k_tor);
+            } else {
+                // Scaled rigid stiffness for valve and flange
+                let E_eff = mat.E;
+                let G_eff = mat.G;
+                if (elem.type === 'valve' || elem.type === 'flange') {
+                    E_eff *= 100.0;
+                    G_eff *= 100.0;
+                }
+                k_local = this._getElementStiffness(E_eff, G_eff, sec.A, sec.Iy, sec.Iz, sec.J, elem.L, elem.k_factor);
             }
-            
-            let k_local = this._getElementStiffness(E_eff, G_eff, sec.A, sec.Iy, sec.Iz, sec.J, elem.L, elem.k_factor);
             elem.k_local = k_local;
             
             // k_global = T.T @ k_local @ T
@@ -474,6 +506,14 @@ class FEASolver {
         let f_U = this.results.f_local_U;
         
         this.elements.forEach(elem => {
+            if (elem.type === 'hose') {
+                elem.compliance = {
+                    S_L: 0, S_L_allowable: 1, S_L_ratio: 0,
+                    S_E: 0, S_E_allowable: 1, S_E_ratio: 0,
+                    S_OL: 0, S_OL_allowable: 1, S_OL_ratio: 0
+                };
+                return;
+            }
             let sec = this.sections[elem.section];
             let mat = this.materials[elem.material];
             
