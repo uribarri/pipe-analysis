@@ -45,11 +45,11 @@ function initThreeJS() {
     scene.background = new THREE.Color(0x8a909d);
     
     // Axes Helper at origin with labels
-    const axesHelper = new THREE.AxesHelper(1.5);
+    const axesHelper = new THREE.AxesHelper(5.0);
     scene.add(axesHelper);
-    scene.add(createAxisLabel('X', '#ef4444', new THREE.Vector3(1.6, 0, 0)));
-    scene.add(createAxisLabel('Y', '#10b981', new THREE.Vector3(0, 1.6, 0)));
-    scene.add(createAxisLabel('Z', '#3b82f6', new THREE.Vector3(0, 0, 1.6)));
+    scene.add(createAxisLabel('X', '#ef4444', new THREE.Vector3(5.5, 0, 0)));
+    scene.add(createAxisLabel('Y', '#10b981', new THREE.Vector3(0, 5.5, 0)));
+    scene.add(createAxisLabel('Z', '#3b82f6', new THREE.Vector3(0, 0, 5.5)));
     
     // Camera
     camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
@@ -1337,11 +1337,11 @@ function createNodeLabelSprite(text, position) {
     const spriteMat = new THREE.SpriteMaterial({ map: texture, depthTest: false, depthWrite: false });
     const sprite = new THREE.Sprite(spriteMat);
     
-    sprite.scale.set(0.3, 0.3, 1);
+    sprite.scale.set(0.8, 0.8, 1);
     
     sprite.position.copy(position);
-    sprite.position.y += 0.22;
-    sprite.position.x += 0.12;
+    sprite.position.y += 0.6;
+    sprite.position.x += 0.3;
     sprite.renderOrder = 999;
     
     return sprite;
@@ -1362,7 +1362,7 @@ function createAxisLabel(text, color, position) {
     const texture = new THREE.CanvasTexture(canvas);
     const spriteMat = new THREE.SpriteMaterial({ map: texture, depthTest: false, depthWrite: false });
     const sprite = new THREE.Sprite(spriteMat);
-    sprite.scale.set(0.2, 0.2, 1);
+    sprite.scale.set(0.8, 0.8, 1);
     sprite.position.copy(position);
     sprite.renderOrder = 1000;
     return sprite;
