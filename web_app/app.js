@@ -19,7 +19,7 @@ let viewStateMode = "original"; // "original" or "deformed"
 
 // Three.js Globals
 let scene, camera, renderer, controls;
-let pipeGroup, supportGroup;
+let pipeGroup, supportGroup, nodeLabelGroup, gridHelper;
 
 // Initialize Web App
 window.addEventListener('DOMContentLoaded', () => {
@@ -77,11 +77,6 @@ function initThreeJS() {
     const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
     dirLight2.position.set(-10, -20, -10);
     scene.add(dirLight2);
-    
-    // Grid Helper
-    const gridHelper = new THREE.GridHelper(20, 20, 0x374151, 0x1f2937);
-    gridHelper.position.y = -1;
-    scene.add(gridHelper);
     
     // Groups
     pipeGroup = new THREE.Group();
@@ -143,6 +138,42 @@ function render3DModel() {
         }
         renderNodes[nid] = new THREE.Vector3(coords[0], coords[1], coords[2]);
     });
+    
+    // Dynamically rebuild grid helper to underlie the entire piping model
+    if (gridHelper) {
+        scene.remove(gridHelper);
+    }
+    let minX = Infinity, maxX = -Infinity;
+    let minY = Infinity, maxY = -Infinity;
+    let minZ = Infinity, maxZ = -Infinity;
+    let nodeKeys = Object.keys(renderNodes);
+    if (nodeKeys.length > 0) {
+        nodeKeys.forEach(nid => {
+            const p = renderNodes[nid];
+            if (p.x < minX) minX = p.x;
+            if (p.x > maxX) maxX = p.x;
+            if (p.y < minY) minY = p.y;
+            if (p.y > maxY) maxY = p.y;
+            if (p.z < minZ) minZ = p.z;
+            if (p.z > maxZ) maxZ = p.z;
+        });
+        
+        let sizeX = maxX - minX;
+        let sizeZ = maxZ - minZ;
+        let maxDim = Math.max(sizeX, sizeZ, 20); // Minimum size of 20
+        let gridSize = Math.ceil(maxDim * 1.6 / 10) * 10; // Rounded up to nearest 10
+        let divisions = gridSize; // 1 unit grid lines
+        
+        gridHelper = new THREE.GridHelper(gridSize, divisions, 0x374151, 0x1f2937);
+        gridHelper.position.x = (minX + maxX) / 2;
+        gridHelper.position.z = (minZ + maxZ) / 2;
+        gridHelper.position.y = minY - 2.0; // Place 2 units below the lowest node
+        scene.add(gridHelper);
+    } else {
+        gridHelper = new THREE.GridHelper(20, 20, 0x374151, 0x1f2937);
+        gridHelper.position.y = -1;
+        scene.add(gridHelper);
+    }
     
     // Identify bend nodes (Node A === Node B and type === 'bend')
     const bendAtNode = {};
