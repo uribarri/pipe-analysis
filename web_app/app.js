@@ -231,6 +231,21 @@ function render3DModel() {
             flangeMesh.quaternion.copy(pipeMesh.quaternion);
             pipeGroup.add(flangeMesh);
             
+        } else if (elem.type === 'tee') {
+            // Draw straight pipe
+            const cylinderGeo = new THREE.CylinderGeometry(pipeRadius, pipeRadius, shiftedLen, 12);
+            const pipeMesh = new THREE.Mesh(cylinderGeo, material);
+            pipeMesh.position.copy(p1).add(shiftedDir.clone().multiplyScalar(0.5));
+            pipeMesh.quaternion.setFromUnitVectors(up, dirNorm);
+            pipeGroup.add(pipeMesh);
+            
+            // Draw Tee fitting (sphere) in the middle of the element
+            const teeGeo = new THREE.SphereGeometry(pipeRadius * 1.35, 16, 16);
+            const teeMat = new THREE.MeshStandardMaterial({ color: 0x9ca3af, roughness: 0.3, metalness: 0.9 });
+            const teeMesh = new THREE.Mesh(teeGeo, teeMat);
+            teeMesh.position.copy(pipeMesh.position);
+            pipeGroup.add(teeMesh);
+            
         } else if (elem.type === 'valve') {
             // Draw straight pipe
             const cylinderGeo = new THREE.CylinderGeometry(pipeRadius, pipeRadius, shiftedLen, 12);
@@ -326,6 +341,13 @@ function render3DModel() {
             flangeMesh.position.copy(p);
             flangeMesh.quaternion.setFromUnitVectors(up, dirNorm);
             pipeGroup.add(flangeMesh);
+            
+        } else if (elem.type === 'tee') {
+            const teeGeo = new THREE.SphereGeometry(pipeRadius * 1.35, 16, 16);
+            const teeMat = new THREE.MeshStandardMaterial({ color: 0x9ca3af, roughness: 0.3, metalness: 0.9 });
+            const teeMesh = new THREE.Mesh(teeGeo, teeMat);
+            teeMesh.position.copy(p);
+            pipeGroup.add(teeMesh);
             
         } else if (elem.type === 'valve') {
             const valveMat = new THREE.MeshStandardMaterial({ color: 0x374151, roughness: 0.4, metalness: 0.8 });
@@ -500,6 +522,7 @@ function rebuildInputTables() {
         if (el.type === 'bend') typeText = `Bend (R=${el.bend_radius}m)`;
         else if (el.type === 'valve') typeText = `Valve (${el.weight}kg)`;
         else if (el.type === 'flange') typeText = `Flange (${el.weight}kg)`;
+        else if (el.type === 'tee') typeText = `Tee (${el.weight}kg)`;
         else if (el.type === 'hose') typeText = `Hose (Ax=${(el.k_ax/1e6).toFixed(1)}M)`;
         else typeText = 'Pipe';
         elemTableBody.innerHTML += `
@@ -641,7 +664,7 @@ function addElement(e) {
     
     if (type === 'bend') {
         elem.bend_radius = parseFloat(document.getElementById('element-bend-radius').value);
-    } else if (type === 'valve' || type === 'flange') {
+    } else if (type === 'valve' || type === 'flange' || type === 'tee') {
         elem.weight = parseFloat(document.getElementById('element-weight').value) || 0.0;
     } else if (type === 'hose') {
         elem.k_ax = parseFloat(document.getElementById('element-k-ax').value) || 1e7;
@@ -814,7 +837,7 @@ function toggleStiffnessField(dof) {
 function toggleElementFields() {
     let type = document.getElementById('element-type').value;
     document.getElementById('bend-radius-field').style.display = type === 'bend' ? 'block' : 'none';
-    document.getElementById('element-weight-field').style.display = (type === 'valve' || type === 'flange') ? 'block' : 'none';
+    document.getElementById('element-weight-field').style.display = (type === 'valve' || type === 'flange' || type === 'tee') ? 'block' : 'none';
     document.getElementById('element-hose-fields').style.display = type === 'hose' ? 'block' : 'none';
 }
 

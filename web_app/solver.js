@@ -64,19 +64,24 @@ class FEASolver {
         // Find point components (Node A === Node B)
         let bendAtNode = {};
         let weightAtNode = {};
+        let teeAtNode = {};
         this.elements.forEach(elem => {
             if (String(elem.node_A) === String(elem.node_B)) {
                 let sec = this.sections[elem.section];
                 let od = sec ? parseFloat(sec.OD) : 0.1143;
                 if (elem.type === 'bend') {
                     bendAtNode[String(elem.node_A)] = parseFloat(elem.bend_radius) || (1.5 * od);
-                } else if (elem.type === 'valve' || elem.type === 'flange') {
+                } else if (elem.type === 'valve' || elem.type === 'flange' || elem.type === 'tee') {
                     weightAtNode[String(elem.node_A)] = (weightAtNode[String(elem.node_A)] || 0.0) + parseFloat(elem.weight || 0.0);
+                    if (elem.type === 'tee') {
+                        teeAtNode[String(elem.node_A)] = true;
+                    }
                 }
             }
         });
         this.bendAtNode = bendAtNode;
         this.weightAtNode = weightAtNode;
+        this.teeAtNode = teeAtNode;
 
         // Count element connections at each node to identify branches (Tees)
         let nodeElemCount = {};
@@ -161,9 +166,9 @@ class FEASolver {
                 let theta = (L_chord < 2.0 * R) ? 2.0 * Math.asin(L_chord / (2.0 * R)) : Math.PI / 2.0;
                 elem.L = R * theta;
             } else if (elemType === 'pipe') {
-                // Tee check only applies if not adjacent to a bend
-                let is_branch_A = nodeElemCount[String(elem.node_A)] >= 3;
-                let is_branch_B = nodeElemCount[String(elem.node_B)] >= 3;
+                // Tee check applies if node connects to 3+ elements OR is marked as a Tee fitting
+                let is_branch_A = (nodeElemCount[String(elem.node_A)] >= 3) || (this.teeAtNode[String(elem.node_A)] === true);
+                let is_branch_B = (nodeElemCount[String(elem.node_B)] >= 3) || (this.teeAtNode[String(elem.node_B)] === true);
                 
                 if (is_branch_A && R_A === 0) {
                     let h_tee = 4.4 * sec.wall_thickness / sec.OD;
@@ -311,10 +316,10 @@ class FEASolver {
                 let k_tor = 500.0;
                 k_local = this._getHoseStiffness(k_ax, k_lat, k_rot, k_tor);
             } else {
-                // Scaled rigid stiffness for valve and flange
+                // Scaled rigid stiffness for valve, flange, and tee
                 let E_eff = mat.E;
                 let G_eff = mat.G;
-                if (elem.type === 'valve' || elem.type === 'flange') {
+                if (elem.type === 'valve' || elem.type === 'flange' || elem.type === 'tee') {
                     E_eff *= 100.0;
                     G_eff *= 100.0;
                 }
@@ -459,7 +464,7 @@ class FEASolver {
             
             if (caseType === 'W') {
                 let m_total = 0.0;
-                if (elem.type === 'valve' || elem.type === 'flange') {
+                if (elem.type === 'valve' || elem.type === 'flange' || elem.type === 'tee') {
                     m_total = parseFloat(elem.weight || 0.0);
                 } else {
                     let rho_steel = parseFloat(mat.density || 7850.0);
@@ -491,7 +496,7 @@ class FEASolver {
             } else if (caseType === 'U') {
                 let seismic_g = new Float64Array(this.loads.occasional_g || [0.0, 0.0, 0.0]);
                 let m_total = 0.0;
-                if (elem.type === 'valve' || elem.type === 'flange') {
+                if (elem.type === 'valve' || elem.type === 'flange' || elem.type === 'tee') {
                     m_total = parseFloat(elem.weight || 0.0);
                 } else {
                     let rho_steel = parseFloat(mat.density || 7850.0);
