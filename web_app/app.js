@@ -42,7 +42,7 @@ function initThreeJS() {
     
     // Scene
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x22252c);
+    scene.background = new THREE.Color(0x8a909d);
     
     // Camera
     camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
