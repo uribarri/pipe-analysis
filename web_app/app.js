@@ -392,7 +392,7 @@ function render3DModel() {
             let p_t2 = p_nid.clone().addScaledVector(dir2, R);
             
             let sec = modelState.sections[el1.section];
-            let pipeRadius = sec ? parseFloat(sec.OD) / 2.0 : 0.05;
+            let pipeRadius = sec ? (parseFloat(sec.OD) / 12.0) / 2.0 : 0.1875;
             
             // Color mapping
             let bendColor = 0x10b981; 
