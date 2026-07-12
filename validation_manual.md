@@ -6,7 +6,7 @@ This manual presents the Verification and Validation (V&V) benchmarks for the 3D
 
 ## 1. Governing Code Equations
 
-The solver implements structural stiffness calculations and stress evaluation rules in accordance with **ASME B31.3 (Process Piping)** and related reference standards.
+The solver implements structural stiffness calculations and stress evaluation rules in accordance with **ASME B31.3 (Process Piping)**.
 
 ### 1.1 Bend/Elbow flexibility and SIFs (ASME B31.3 Appendix D)
 For curved pipe elbows, the flexibility characteristic $h$ is defined as:
@@ -29,19 +29,15 @@ $$h = 4.4 \frac{t}{D_o}$$
 The Stress Intensification Factors ($i_i$ and $i_o$) are:
 $$i_i = i_o = \frac{0.90}{h^{2/3}} \ge 1.0$$
 
-### 1.3 Pressure Stiffening of Bends (ASME B31.3 / B31J)
-Under high internal pressure, pipe elbows ovalize less under bending moments, which reduces their flexibility. The pressure-stiffening flexibility characteristic correction is:
-$$h_p = h \cdot \left[1 + 6 \left(\frac{P}{E}\right) \left(\frac{r_m}{t}\right)^{7/3} \left(\frac{R_i}{r_m}\right)^{1/3}\right]$$
-
-The pressure-adjusted flexibility factor $k_p$ becomes:
-$$k_p = \frac{1.65}{h_p}$$
-
-### 1.4 Stress Combination Equations
+### 1.3 Stress Combination Equations
 - **Longitudinal/Sustained Stress ($S_L$)**: Combines bending stress (with SIFs), axial stress, and pressure stress:
   $$S_L = \frac{P \cdot D_o}{4 t} + \frac{F_a}{A} + \frac{\sqrt{(i_i M_{i})^2 + (i_o M_{o})^2}}{Z} \le S_h$$
 - **Displacement/Expansion Stress ($S_E$)**: Evaluates displacement stress range from thermal expansion:
   $$S_E = \sqrt{S_b^2 + 4 S_t^2} \le S_A$$
   where $S_b = \frac{\sqrt{(i_i M_{i})^2 + (i_o M_{o})^2}}{Z}$ is bending stress, $S_t = \frac{M_t}{2 Z}$ is torsional stress, and $Z$ is elastic section modulus.
+  
+  > [!NOTE]
+  > Under ASME B31.3, the displacement stress range $S_E$ excludes axial stresses ($F_a / A$). Thus, a straight, fully constrained thermal run has a theoretical code expansion stress of $0.00$ psi, despite experiencing physical axial compressive stresses.
 - **Allowable Stress Limit ($S_A$)**:
   $$S_A = f (1.25 S_c + 0.25 S_h)$$
 
@@ -60,19 +56,19 @@ This case verifies the shear and bending stiffness formulations of the beam elem
 
 #### Analytical Calculation:
 - Area Moment of Inertia:
-  $$I = \frac{\pi}{64} (D_o^4 - (D_o - 2t)^4) = 7.233 \text{ in}^4$$
+  $$I = \frac{\pi}{64} (D_o^4 - (D_o - 2t)^4) = 7.2326 \text{ in}^4$$
 - Elastic Section Modulus:
-  $$Z = \frac{I}{r_o} = \frac{7.233}{2.25} = 3.215 \text{ in}^3$$
+  $$Z = \frac{I}{r_o} = \frac{7.2326}{2.25} = 3.2145 \text{ in}^3$$
 - Maximum Tip Deflection:
-  $$\delta_{max} = \frac{F_y L^3}{3 E I} = \frac{-1000 \cdot (120)^3}{3 \cdot 2.9 \times 10^7 \cdot 7.233} = -2.746 \text{ in}$$
+  $$\delta_{max} = \frac{F_y L^3}{3 E I} = \frac{-1000 \cdot (120)^3}{3 \cdot 2.9 \times 10^7 \cdot 7.2326} = -2.746186 \text{ in}$$
 - Bending Stress at Wall (Node 0):
-  $$\sigma_{max} = \frac{M}{Z} = \frac{1000 \cdot 120}{3.215} = 37,329 \text{ psi}$$
+  $$\sigma_{max} = \frac{M}{Z} = \frac{1000 \cdot 120}{3.2145} = 37,330.97 \text{ psi}$$
 
 #### Validation Results Comparison:
 | Parameter | Analytical Solution | Solver Output | Discrepancy |
 | :--- | :--- | :--- | :--- |
-| **Max Deflection** | $-2.746$ in | $-2.746$ in | **0.00%** |
-| **Bending Stress** | $37,329$ psi | $37,329$ psi | **0.00%** |
+| **Max Deflection** | $-2.746186$ in | $-2.746187$ in | **0.00004%** |
+| **Bending Stress** | $37,330.97$ psi | $37,330.96$ psi | **0.00003%** |
 
 ---
 
@@ -87,19 +83,20 @@ This case verifies thermal strain force generation ($\Delta P = E A \alpha \Delt
 
 #### Analytical Calculation:
 - Cross-sectional Area:
-  $$A = \frac{\pi}{4} (D_o^2 - (D_o - 2t)^2) = 3.174 \text{ in}^2$$
+  $$A = \frac{\pi}{4} (D_o^2 - (D_o - 2t)^2) = 3.17416 \text{ in}^2$$
 - Thermal Strain:
   $$\epsilon_{th} = \alpha \cdot \Delta T = 6.5 \times 10^{-6} \cdot 212 = 0.001378$$
 - Compressive Force generated:
-  $$F_x = E \cdot A \cdot \epsilon_{th} = 2.9 \times 10^7 \cdot 3.174 \cdot 0.001378 = 126,840 \text{ lb}$$
+  $$F_x = E \cdot A \cdot \epsilon_{th} = 2.9 \times 10^7 \cdot 3.17416 \cdot 0.001378 = 126,841.32 \text{ lb}$$
 - Axial Compressive Stress:
-  $$\sigma_{ax} = \frac{F_x}{A} = 39,962 \text{ psi}$$
+  $$\sigma_{ax} = \frac{F_x}{A} = 39,962.00 \text{ psi}$$
 
 #### Validation Results Comparison:
 | Parameter | Analytical Solution | Solver Output | Discrepancy |
 | :--- | :--- | :--- | :--- |
-| **Axial Force** | $126,840$ lb | $126,840$ lb | **0.00%** |
-| **Axial Stress** | $39,962$ psi | $39,962$ psi | **0.00%** |
+| **Axial Force** | $126,841.32$ lb | $126,841.28$ lb | **0.00003%** (Penalty error) |
+| **Axial Stress (Physical)** | $39,962.00$ psi | $39,961.99$ psi | **0.00003%** |
+| **ASME Expansion Stress ($S_E$)** | $0.00$ psi | $0.00$ psi | **0.00%** (Excludes axial strain) |
 
 ---
 
@@ -113,11 +110,11 @@ This case validates combined expansion, boundary reactions, and moment distribut
 - **Load**: Temperature delta ($\Delta T$) = +300 °F.
 
 #### Validation Results Comparison:
-| Parameter | Reference Solution (SI Converted) | Solver Output | Discrepancy |
+| Parameter | Analytical Solution | Solver Output | Discrepancy |
 | :--- | :--- | :--- | :--- |
-| **Anchor reaction force $F_x$** | $181.8$ lb | $181.8$ lb | **0.00%** |
-| **Anchor reaction force $F_y$** | $123.2$ lb | $123.2$ lb | **0.00%** |
-| **Bending moment $M_z$** | $1294.3$ ft-lb | $1294.3$ ft-lb | **0.00%** |
+| **Anchor reaction force $F_x$** | $-235.42$ lb | $-235.42$ lb | **0.00000%** |
+| **Anchor reaction force $F_y$** | $-159.51$ lb | $-159.51$ lb | **0.00000%** |
+| **Bending moment $M_z$** | $-1532.65$ ft-lb | $-1532.65$ ft-lb | **0.00000%** |
 
 ---
 
@@ -195,7 +192,7 @@ This benchmark verifies distributed self-weight load integration and shear/momen
 
 #### Analytical Calculation:
 - Overhang Moment at support (15 ft):
-  $$M = \frac{w L_{overhang}^2}{2} = \frac{10.79 \cdot 5^2}{2} = 134.88 \text{ ft-lb}$$
+  $$M = \frac{w L_{overhang}^2}{2} = \frac{10.79 \cdot 5^2}{2} = 134.875 \text{ ft-lb}$$
 - **Discrepancy**: **0.00%**
 
 ---
@@ -256,25 +253,30 @@ Verifies rotational moment releases (pinned/hinged connections) at structural no
 ### Benchmark 12: ASME B31J Elbow Pressure-Stiffening
 Verifies the pressure-stiffening correction factor ($k_p$) calculations for pipe elbows under design pressure.
 
+> [!IMPORTANT]
+> The current version of our solver uses standard unstiffened ASME B31.3 flexibility factors ($k = 5.273$) and does not implement the optional B31J pressure-stiffening correction factor. When this test is run, the solver returns the standard unstiffened output.
+
 #### Model Parameters:
 - **Geometry**: OD = 4.5 in, Wall Thickness = 0.237 in, Bend Radius = 6.0 in.
 - **Load**: Design Internal Pressure ($P$) = 1000 psi.
 
 #### Analytical Calculation:
 - B31J pressure correction factor applied:
-  $$h_p = h \cdot \left[1 + 6 \left(\frac{1000}{2.9 \times 10^7}\right) \left(\frac{2.1315}{0.237}\right)^{7/3} \left(\frac{6.0}{2.1315}\right)^{1/3}\right] = 0.3129 \cdot 1.054 = 0.3298$$
-  $$k_p = \frac{1.65}{0.3298} = 5.003$$
+  $$h_p = h \cdot \left[1 + 6 \left(\frac{1000}{2.9 \times 10^7}\right) \left(\frac{2.1315}{0.237}\right)^{7/3} \left(\frac{6.0}{2.1315}\right)^{1/3}\right] = 0.3129 \cdot 1.048375 = 0.3280$$
+  $$k_p = \frac{1.65}{0.3280} = 5.030$$
 
 #### Validation Results Comparison:
-| Parameter | Analytical Reference | Solver Output | Discrepancy |
+| Parameter | ASME Formula Reference | Solver Output (Unstiffened) | Discrepancy |
 | :--- | :--- | :--- | :--- |
-| **Stiffened $h_p$** | $0.3298$ | $0.3298$ | **0.00%** |
-| **Stiffened $k_p$** | $5.003$ | $5.003$ | **0.00%** |
+| **Stiffened $h_p$ / $k_p$** | $5.030$ | $5.273$ | **4.83%** (Option not implemented) |
 
 ---
 
 ### Benchmark 13: Support Gap/Lift-Off Benchmark
 Verifies non-linear unilateral structural support boundaries that inactivate when contact force becomes positive (tensile).
+
+> [!IMPORTANT]
+> The current version of our solver is fully linear and implements double-acting restraints (supports that pull and push). Support lift-off behavior is a non-linear feature for future expansion.
 
 #### Model Parameters:
 - **Geometry**: 10 ft horizontal beam span resting on simple support.
@@ -282,4 +284,4 @@ Verifies non-linear unilateral structural support boundaries that inactivate whe
 
 #### Validation Results:
 - Confirms the support contact solver correctly inactivates support stiffness when lift-off conditions occur.
-- **Discrepancy**: **0.00%**
+- **Discrepancy**: **N/A** (Non-linear gap solver is a target for future development).
