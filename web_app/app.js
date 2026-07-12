@@ -448,24 +448,108 @@ function render3DModel() {
         
         const bc = modelState.boundary_conditions[nid];
         
-        // Check if fully fixed (Anchor)
-        const isAnchor = bc.tx === true && bc.ty === true && bc.tz === true &&
-                         bc.rx === true && bc.ry === true && bc.rz === true;
-                         
-        if (isAnchor) {
-            // Anchor marker: Red pyramid
-            const pyramidGeo = new THREE.ConeGeometry(0.18, 0.3, 4);
-            const material = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.5 });
-            const mesh = new THREE.Mesh(pyramidGeo, material);
-            mesh.position.copy(p).y -= 0.15;
-            supportGroup.add(mesh);
+        if (bc.type === 'rod_hanger') {
+            // Gray vertical rod extending upward
+            const rodGeo = new THREE.CylinderGeometry(0.02, 0.02, 1.2, 8);
+            const rodMat = new THREE.MeshStandardMaterial({ color: 0x9ca3af, metalness: 0.8, roughness: 0.2 });
+            const rod = new THREE.Mesh(rodGeo, rodMat);
+            rod.position.copy(p);
+            rod.position.y += 0.6; // shift up
+            supportGroup.add(rod);
+            
+            // Top clamp attachment
+            const clampGeo = new THREE.SphereGeometry(0.06, 8, 8);
+            const clampMat = new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.4 });
+            const clamp = new THREE.Mesh(clampGeo, clampMat);
+            clamp.position.copy(p);
+            clamp.position.y += 1.2;
+            supportGroup.add(clamp);
+        } else if (bc.type === 'variable_spring') {
+            // Green spring housing
+            const housingGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.6, 12);
+            const housingMat = new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.4 });
+            const housing = new THREE.Mesh(housingGeo, housingMat);
+            housing.position.copy(p);
+            housing.position.y += 0.7;
+            supportGroup.add(housing);
+            
+            // Connecting rod
+            const rodGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.4, 8);
+            const rodMat = new THREE.MeshStandardMaterial({ color: 0xd1d5db, metalness: 0.8, roughness: 0.2 });
+            const rod = new THREE.Mesh(rodGeo, rodMat);
+            rod.position.copy(p);
+            rod.position.y += 0.2;
+            supportGroup.add(rod);
+        } else if (bc.type === 'constant_hanger') {
+            // Orange rectangular housing
+            const housingGeo = new THREE.BoxGeometry(0.24, 0.4, 0.24);
+            const housingMat = new THREE.MeshStandardMaterial({ color: 0xea580c, roughness: 0.4 });
+            const housing = new THREE.Mesh(housingGeo, housingMat);
+            housing.position.copy(p);
+            housing.position.y += 0.8;
+            supportGroup.add(housing);
+            
+            // Connecting rod
+            const rodGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.6, 8);
+            const rodMat = new THREE.MeshStandardMaterial({ color: 0xd1d5db, metalness: 0.8, roughness: 0.2 });
+            const rod = new THREE.Mesh(rodGeo, rodMat);
+            rod.position.copy(p);
+            rod.position.y += 0.3;
+            supportGroup.add(rod);
+        } else if (bc.type === 'snubber') {
+            // Snubber: cylinder along the active axis
+            const axis = bc.axis || 'y';
+            const cylinderGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.8, 8);
+            const cylinderMat = new THREE.MeshStandardMaterial({ color: 0x2563eb, metalness: 0.9, roughness: 0.1 });
+            const cylinder = new THREE.Mesh(cylinderGeo, cylinderMat);
+            
+            cylinder.position.copy(p);
+            if (axis === 'x') {
+                cylinder.rotation.z = Math.PI / 2.0;
+                cylinder.position.x += 0.4;
+            } else if (axis === 'z') {
+                cylinder.rotation.x = Math.PI / 2.0;
+                cylinder.position.z += 0.4;
+            } else {
+                cylinder.position.y += 0.4;
+            }
+            supportGroup.add(cylinder);
+            
+            // Back plate/wall attachment
+            const plateGeo = new THREE.BoxGeometry(0.15, 0.15, 0.02);
+            const plateMat = new THREE.MeshStandardMaterial({ color: 0x4b5563, roughness: 0.5 });
+            const plate = new THREE.Mesh(plateGeo, plateMat);
+            plate.position.copy(p);
+            if (axis === 'x') {
+                plate.rotation.y = Math.PI / 2.0;
+                plate.position.x += 0.8;
+            } else if (axis === 'z') {
+                plate.position.z += 0.8;
+            } else {
+                plate.rotation.x = Math.PI / 2.0;
+                plate.position.y += 0.8;
+            }
+            supportGroup.add(plate);
         } else {
-            // Spring or roller guides: Blue pyramids/boxes
-            const boxGeo = new THREE.BoxGeometry(0.12, 0.12, 0.12);
-            const material = new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.5 });
-            const mesh = new THREE.Mesh(boxGeo, material);
-            mesh.position.copy(p);
-            supportGroup.add(mesh);
+            // Standard/Custom boundary conditions
+            const isAnchor = bc.tx === true && bc.ty === true && bc.tz === true &&
+                             bc.rx === true && bc.ry === true && bc.rz === true;
+                             
+            if (isAnchor) {
+                // Anchor marker: Red pyramid
+                const pyramidGeo = new THREE.ConeGeometry(0.18, 0.3, 4);
+                const material = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.5 });
+                const mesh = new THREE.Mesh(pyramidGeo, material);
+                mesh.position.copy(p).y -= 0.15;
+                supportGroup.add(mesh);
+            } else {
+                // Spring or roller guides: Blue pyramids/boxes
+                const boxGeo = new THREE.BoxGeometry(0.12, 0.12, 0.12);
+                const material = new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.5 });
+                const mesh = new THREE.Mesh(boxGeo, material);
+                mesh.position.copy(p);
+                supportGroup.add(mesh);
+            }
         }
     });
 
@@ -628,13 +712,23 @@ function rebuildInputTables() {
         let trans = [];
         let rot = [];
         
-        ['tx', 'ty', 'tz'].forEach(dof => {
-            if (bc[dof] === true) trans.push(dof.toUpperCase());
-            else if (typeof bc[dof] === 'number') trans.push(`${dof.toUpperCase()}(K=${bc[dof]} lb/in)`);
-        });
-        ['rx', 'ry', 'rz'].forEach(dof => {
-            if (bc[dof] === true) rot.push(dof.toUpperCase());
-        });
+        if (bc.type === 'rod_hanger') {
+            trans.push("Rigid Rod Hanger (Y)");
+        } else if (bc.type === 'variable_spring') {
+            trans.push(`Var Spring (K=${bc.ty} lb/in, Preload=${bc.preload} lb)`);
+        } else if (bc.type === 'constant_hanger') {
+            trans.push(`Constant Support (Force=${bc.force} lb)`);
+        } else if (bc.type === 'snubber') {
+            trans.push(`Seismic Snubber (${bc.axis.toUpperCase()})`);
+        } else {
+            ['tx', 'ty', 'tz'].forEach(dof => {
+                if (bc[dof] === true) trans.push(dof.toUpperCase());
+                else if (typeof bc[dof] === 'number') trans.push(`${dof.toUpperCase()}(K=${bc[dof]} lb/in)`);
+            });
+            ['rx', 'ry', 'rz'].forEach(dof => {
+                if (bc[dof] === true) rot.push(dof.toUpperCase());
+            });
+        }
         
         bcTableBody.innerHTML += `
             <tr>
@@ -760,30 +854,52 @@ function deleteSection(id) {
 function addRestraint(e) {
     e.preventDefault();
     let nid = document.getElementById('restraint-node').value;
-    let bc = {};
+    let type = document.getElementById('restraint-type').value;
+    let bc = { type: type };
     
-    ['tx', 'ty', 'tz'].forEach(dof => {
-        let isRigid = document.getElementById(`restraint-${dof}`).checked;
-        if (isRigid) {
-            bc[dof] = true;
-        } else {
-            let stiffVal = parseFloat(document.getElementById(`restraint-${dof}-stiff`).value);
-            if (!isNaN(stiffVal)) bc[dof] = stiffVal;
-        }
-    });
-    
-    ['rx', 'ry', 'rz'].forEach(dof => {
-        if (document.getElementById(`restraint-${dof}`).checked) bc[dof] = true;
-    });
+    if (type === 'custom') {
+        ['tx', 'ty', 'tz'].forEach(dof => {
+            let isRigid = document.getElementById(`restraint-${dof}`).checked;
+            if (isRigid) {
+                bc[dof] = true;
+            } else {
+                let stiffVal = parseFloat(document.getElementById(`restraint-${dof}-stiff`).value);
+                if (!isNaN(stiffVal)) bc[dof] = stiffVal;
+            }
+        });
+        ['rx', 'ry', 'rz'].forEach(dof => {
+            if (document.getElementById(`restraint-${dof}`).checked) bc[dof] = true;
+        });
+    } else if (type === 'rod_hanger') {
+        bc.ty = true; // rigid vertical Y
+    } else if (type === 'variable_spring') {
+        bc.ty = parseFloat(document.getElementById('spring-rate').value) || 100.0;
+        bc.preload = parseFloat(document.getElementById('spring-preload').value) || 0.0;
+    } else if (type === 'constant_hanger') {
+        bc.force = parseFloat(document.getElementById('constant-force').value) || 0.0;
+    } else if (type === 'snubber') {
+        bc.axis = document.getElementById('snubber-axis').value || 'y';
+    }
     
     modelState.boundary_conditions[nid] = bc;
     rebuildInputTables();
+    
     document.getElementById('form-restraint').reset();
+    document.getElementById('restraint-type').value = 'custom';
+    toggleRestraintTypeFields();
     
     // Disable stiffness fields again
     ['tx', 'ty', 'tz'].forEach(dof => {
         document.getElementById(`restraint-${dof}-stiff`).disabled = true;
     });
+}
+
+function toggleRestraintTypeFields() {
+    let type = document.getElementById('restraint-type').value;
+    document.getElementById('restraint-custom-fields').style.display = type === 'custom' ? 'grid' : 'none';
+    document.getElementById('restraint-variable-spring-fields').style.display = type === 'variable_spring' ? 'grid' : 'none';
+    document.getElementById('restraint-constant-fields').style.display = type === 'constant_hanger' ? 'grid' : 'none';
+    document.getElementById('restraint-snubber-fields').style.display = type === 'snubber' ? 'grid' : 'none';
 }
 
 function deleteRestraint(nid) {
@@ -934,11 +1050,20 @@ function runAnalysis() {
         // 5. Convert Boundary Conditions: tx, ty, tz (lb/in -> N/m)
         Object.keys(solverInput.boundary_conditions).forEach(nid => {
             let bc = solverInput.boundary_conditions[nid];
-            ['tx', 'ty', 'tz'].forEach(dof => {
-                if (typeof bc[dof] === 'number') {
-                    bc[dof] = bc[dof] * 175.1268;
-                }
-            });
+            if (bc.type === 'variable_spring') {
+                if (typeof bc.ty === 'number') bc.ty = bc.ty * 175.1268;
+                if (typeof bc.preload === 'number') bc.preload = bc.preload * 4.4482216;
+            } else if (bc.type === 'constant_hanger') {
+                if (typeof bc.force === 'number') bc.force = bc.force * 4.4482216;
+            } else if (bc.type === 'snubber' || bc.type === 'rod_hanger') {
+                // Snubber and rod hanger do not require numerical scaling of stiffness
+            } else {
+                ['tx', 'ty', 'tz'].forEach(dof => {
+                    if (typeof bc[dof] === 'number') {
+                        bc[dof] = bc[dof] * 175.1268;
+                    }
+                });
+            }
         });
         
         // 6. Convert Loads: pressure (psi -> Pa), temp change (F -> C), gravity (ft/s² -> m/s²), point loads (lb -> N, ft-lb -> N-m)

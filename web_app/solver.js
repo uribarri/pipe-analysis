@@ -354,13 +354,29 @@ class FEASolver {
         for (let nid in this.bcs) {
             let idx = this.nodeIdToIdx[String(nid)];
             let bc = this.bcs[nid];
-            for (let dofName in bc) {
-                let val = bc[dofName];
-                let dofIdx = idx * 6 + dofMap[dofName];
-                if (val === true) {
-                    K_global[dofIdx][dofIdx] += penalty;
-                } else if (typeof val === 'number') {
-                    K_global[dofIdx][dofIdx] += val; // Spring Restraint
+            
+            if (bc.type === 'rod_hanger') {
+                let dofIdx = idx * 6 + 1; // vertical Y
+                K_global[dofIdx][dofIdx] += penalty;
+            } else if (bc.type === 'variable_spring') {
+                let dofIdx = idx * 6 + 1; // vertical Y
+                let stiffness = parseFloat(bc.ty) || 0.0;
+                K_global[dofIdx][dofIdx] += stiffness;
+            } else if (bc.type === 'constant_hanger') {
+                // Constant hanger has 0 stiffness in static cases
+            } else if (bc.type === 'snubber') {
+                // Snubber has 0 stiffness in static cases
+            } else {
+                // Standard/Custom boundary conditions
+                for (let dofName in bc) {
+                    if (dofName === 'type') continue;
+                    let val = bc[dofName];
+                    let dofIdx = idx * 6 + dofMap[dofName];
+                    if (val === true) {
+                        K_global[dofIdx][dofIdx] += penalty;
+                    } else if (typeof val === 'number') {
+                        K_global[dofIdx][dofIdx] += val;
+                    }
                 }
             }
         }
@@ -388,8 +404,22 @@ class FEASolver {
         
         // Solve Occasional case (U)
         if (has_occasional) {
+            // Build K_occ as a deep copy of K_global
+            let K_occ = K_global.map(row => new Float64Array(row));
+            
+            // Add snubber penalties to K_occ
+            for (let nid in this.bcs) {
+                let idx = this.nodeIdToIdx[String(nid)];
+                let bc = this.bcs[nid];
+                if (bc.type === 'snubber') {
+                    let axis = bc.axis || 'y';
+                    let dofIdx = idx * 6 + dofMap['t' + axis];
+                    K_occ[dofIdx][dofIdx] += penalty;
+                }
+            }
+            
             let F_U = this._getGlobalLoadVector('U');
-            u_U = this._solveLinearSystem(K_global, F_U);
+            u_U = this._solveLinearSystem(K_occ, F_U);
             f_U = this._calculateElementLocalForces(u_U, 'U');
         } else {
             u_U = new Float64Array(this.numDofs);
@@ -413,6 +443,19 @@ class FEASolver {
 
     _getGlobalLoadVector(caseType) {
         let F = new Float64Array(this.numDofs);
+        
+        // Apply specialized hanger forces (Preloads and Constant Effort supports)
+        if (caseType === 'W' || caseType === 'U') {
+            for (let nid in this.bcs) {
+                let bc = this.bcs[nid];
+                let idx = this.nodeIdToIdx[String(nid)];
+                if (bc.type === 'variable_spring' && typeof bc.preload === 'number') {
+                    F[idx*6 + 1] += bc.preload; // Add upward preload (+Y force)
+                } else if (bc.type === 'constant_hanger' && typeof bc.force === 'number') {
+                    F[idx*6 + 1] += bc.force; // Add upward constant force (+Y force)
+                }
+            }
+        }
         
         // Apply point component masses (valves/flanges at a single node)
         if (caseType === 'W') {
@@ -693,12 +736,16 @@ class FEASolver {
         for (let i = 0; i < this.numDofs; i++) u_OPE[i] = u_W[i] + u_T[i];
         
         let nodeDisps = {};
+        let u_U = this.results.displacements_U;
         this.nodeKeys.forEach((nid, i) => {
             nodeDisps[nid] = {
                 Weight: Array.from(u_W.slice(i*6, i*6+6)),
                 Thermal: Array.from(u_T.slice(i*6, i*6+6)),
                 Operating: Array.from(u_OPE.slice(i*6, i*6+6))
             };
+            if (this.results.has_occasional) {
+                nodeDisps[nid].Occasional = Array.from(u_U.slice(i*6, i*6+6));
+            }
         });
         
         let elementStresses = {};
@@ -832,4 +879,8 @@ class FEASolver {
         }
         return w;
     }
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = FEASolver;
 }
