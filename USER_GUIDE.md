@@ -1,6 +1,6 @@
 # Pipe Stress Analyzer: Standalone Executable & User Guide
 
-Welcome to the **Pipe Stress Analyzer**, a lightweight 3D Finite Element Analysis (FEA) software engineered to replicate the static structural analysis and ASME B31.3 code-compliance checking capabilities of **CAEPIPE**.
+Welcome to the **Pipe Stress Analyzer**, a lightweight 3D Finite Element Analysis (FEA) software engineered for static structural analysis and ASME B31.3 code-compliance checking of piping assemblies.
 
 ---
 
