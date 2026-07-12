@@ -708,6 +708,7 @@ function rebuildInputTables() {
     const bcTableBody = document.querySelector('#table-restraints tbody');
     bcTableBody.innerHTML = "";
     for (let nid in modelState.boundary_conditions) {
+        if (!modelState.boundary_conditions.hasOwnProperty(nid)) continue;
         let bc = modelState.boundary_conditions[nid];
         let trans = [];
         let rot = [];

@@ -33,6 +33,7 @@ class FEASolver {
 
     _calculateSectionProperties() {
         for (let secId in this.sections) {
+            if (!this.sections.hasOwnProperty(secId)) continue;
             let sec = this.sections[secId];
             if (sec.type === 'pipe') {
                 let od = parseFloat(sec.OD);
@@ -352,7 +353,9 @@ class FEASolver {
         let dofMap = { tx: 0, ty: 1, tz: 2, rx: 3, ry: 4, rz: 5 };
         
         for (let nid in this.bcs) {
+            if (!this.bcs.hasOwnProperty(nid)) continue;
             let idx = this.nodeIdToIdx[String(nid)];
+            if (idx === undefined) continue;
             let bc = this.bcs[nid];
             
             if (bc.type === 'rod_hanger') {
@@ -409,7 +412,9 @@ class FEASolver {
             
             // Add snubber penalties to K_occ
             for (let nid in this.bcs) {
+                if (!this.bcs.hasOwnProperty(nid)) continue;
                 let idx = this.nodeIdToIdx[String(nid)];
+                if (idx === undefined) continue;
                 let bc = this.bcs[nid];
                 if (bc.type === 'snubber') {
                     let axis = bc.axis || 'y';
@@ -447,8 +452,10 @@ class FEASolver {
         // Apply specialized hanger forces (Preloads and Constant Effort supports)
         if (caseType === 'W' || caseType === 'U') {
             for (let nid in this.bcs) {
-                let bc = this.bcs[nid];
+                if (!this.bcs.hasOwnProperty(nid)) continue;
                 let idx = this.nodeIdToIdx[String(nid)];
+                if (idx === undefined) continue;
+                let bc = this.bcs[nid];
                 if (bc.type === 'variable_spring' && typeof bc.preload === 'number') {
                     F[idx*6 + 1] += bc.preload; // Add upward preload (+Y force)
                 } else if (bc.type === 'constant_hanger' && typeof bc.force === 'number') {
@@ -460,18 +467,22 @@ class FEASolver {
         // Apply point component masses (valves/flanges at a single node)
         if (caseType === 'W') {
             for (let nid in this.weightAtNode) {
+                if (!this.weightAtNode.hasOwnProperty(nid)) continue;
+                let idx = this.nodeIdToIdx[nid];
+                if (idx === undefined) continue;
                 let m_comp = this.weightAtNode[nid];
                 let g_global = new Float64Array(this.loads.global_gravity || [0.0, -9.81, 0.0]);
-                let idx = this.nodeIdToIdx[nid];
                 F[idx*6 + 0] += m_comp * g_global[0];
                 F[idx*6 + 1] += m_comp * g_global[1];
                 F[idx*6 + 2] += m_comp * g_global[2];
             }
         } else if (caseType === 'U') {
             for (let nid in this.weightAtNode) {
+                if (!this.weightAtNode.hasOwnProperty(nid)) continue;
+                let idx = this.nodeIdToIdx[nid];
+                if (idx === undefined) continue;
                 let m_comp = this.weightAtNode[nid];
                 let seismic_g = new Float64Array(this.loads.occasional_g || [0.0, 0.0, 0.0]);
-                let idx = this.nodeIdToIdx[nid];
                 F[idx*6 + 0] += m_comp * seismic_g[0] * 9.81;
                 F[idx*6 + 1] += m_comp * seismic_g[1] * 9.81;
                 F[idx*6 + 2] += m_comp * seismic_g[2] * 9.81;
