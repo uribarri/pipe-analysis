@@ -1102,7 +1102,7 @@ function runAnalysis() {
         render3DModel();
     } catch(err) {
         console.error(err);
-        alert(`Analysis Error: ${err.message}`);
+        alert(`Analysis Error: ${err.message}\n\nStack Trace:\n${err.stack || 'No stack trace available'}`);
     }
 }
 

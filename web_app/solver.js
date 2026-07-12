@@ -357,6 +357,7 @@ class FEASolver {
             let idx = this.nodeIdToIdx[String(nid)];
             if (idx === undefined) continue;
             let bc = this.bcs[nid];
+            if (!bc) continue;
             
             if (bc.type === 'rod_hanger') {
                 let dofIdx = idx * 6 + 1; // vertical Y
@@ -416,6 +417,7 @@ class FEASolver {
                 let idx = this.nodeIdToIdx[String(nid)];
                 if (idx === undefined) continue;
                 let bc = this.bcs[nid];
+                if (!bc) continue;
                 if (bc.type === 'snubber') {
                     let axis = bc.axis || 'y';
                     let dofIdx = idx * 6 + dofMap['t' + axis];
@@ -456,6 +458,7 @@ class FEASolver {
                 let idx = this.nodeIdToIdx[String(nid)];
                 if (idx === undefined) continue;
                 let bc = this.bcs[nid];
+                if (!bc) continue;
                 if (bc.type === 'variable_spring' && typeof bc.preload === 'number') {
                     F[idx*6 + 1] += bc.preload; // Add upward preload (+Y force)
                 } else if (bc.type === 'constant_hanger' && typeof bc.force === 'number') {
