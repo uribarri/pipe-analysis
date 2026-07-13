@@ -582,6 +582,83 @@ class FEASolver {
             }
         });
         
+        // Apply eccentric actuator forces and moments for valve elements
+        this.elements.forEach(elem => {
+            if (elem.type !== 'valve') return;
+            let m_act = parseFloat(elem.actuator_weight || 0.0);
+            if (m_act <= 0.0) return;
+            
+            let ox = parseFloat(elem.actuator_ox || 0.0);
+            let oy = parseFloat(elem.actuator_oy || 0.0);
+            let oz = parseFloat(elem.actuator_oz || 0.0);
+            let r_act = [ox, oy, oz];
+            
+            let g_acc = [0.0, 0.0, 0.0];
+            if (caseType === 'W') {
+                let g_global = this.loads.global_gravity || [0.0, -9.81, 0.0];
+                g_acc = [g_global[0], g_global[1], g_global[2]];
+            } else if (caseType === 'U') {
+                let seismic_g = this.loads.occasional_g || [0.0, 0.0, 0.0];
+                g_acc = [seismic_g[0] * 9.81, seismic_g[1] * 9.81, seismic_g[2] * 9.81];
+            } else {
+                return; // Thermal cases do not possess mass weight/occasional loads
+            }
+            
+            let F_act = [m_act * g_acc[0], m_act * g_acc[1], m_act * g_acc[2]];
+            let M_act = [
+                r_act[1] * F_act[2] - r_act[2] * F_act[1],
+                r_act[2] * F_act[0] - r_act[0] * F_act[2],
+                r_act[0] * F_act[1] - r_act[1] * F_act[0]
+            ];
+            
+            if (String(elem.node_A) === String(elem.node_B)) {
+                let idx = this.nodeIdToIdx[String(elem.node_A)];
+                if (idx !== undefined) {
+                    F[idx * 6 + 0] += F_act[0];
+                    F[idx * 6 + 1] += F_act[1];
+                    F[idx * 6 + 2] += F_act[2];
+                    F[idx * 6 + 3] += M_act[0];
+                    F[idx * 6 + 4] += M_act[1];
+                    F[idx * 6 + 5] += M_act[2];
+                }
+            } else {
+                let idx_A = this.nodeIdToIdx[String(elem.node_A)];
+                let idx_B = this.nodeIdToIdx[String(elem.node_B)];
+                if (idx_A !== undefined && idx_B !== undefined) {
+                    let p1 = this.nodeCoords[idx_A];
+                    let p2 = this.nodeCoords[idx_B];
+                    let L_vec = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]];
+                    
+                    let F_A = [F_act[0] / 2.0, F_act[1] / 2.0, F_act[2] / 2.0];
+                    let Lv_4 = [L_vec[0] / 4.0, L_vec[1] / 4.0, L_vec[2] / 4.0];
+                    let M_term = [
+                        Lv_4[1] * F_act[2] - Lv_4[2] * F_act[1],
+                        Lv_4[2] * F_act[0] - Lv_4[0] * F_act[2],
+                        Lv_4[0] * F_act[1] - Lv_4[1] * F_act[0]
+                    ];
+                    
+                    let M_A = [M_act[0] / 2.0 + M_term[0], M_act[1] / 2.0 + M_term[1], M_act[2] / 2.0 + M_term[2]];
+                    
+                    let F_B = [F_act[0] / 2.0, F_act[1] / 2.0, F_act[2] / 2.0];
+                    let M_B = [M_act[0] / 2.0 - M_term[0], M_act[1] / 2.0 - M_term[1], M_act[2] / 2.0 - M_term[2]];
+                    
+                    F[idx_A * 6 + 0] += F_A[0];
+                    F[idx_A * 6 + 1] += F_A[1];
+                    F[idx_A * 6 + 2] += F_A[2];
+                    F[idx_A * 6 + 3] += M_A[0];
+                    F[idx_A * 6 + 4] += M_A[1];
+                    F[idx_A * 6 + 5] += M_A[2];
+                    
+                    F[idx_B * 6 + 0] += F_B[0];
+                    F[idx_B * 6 + 1] += F_B[1];
+                    F[idx_B * 6 + 2] += F_B[2];
+                    F[idx_B * 6 + 3] += M_B[0];
+                    F[idx_B * 6 + 4] += M_B[1];
+                    F[idx_B * 6 + 5] += M_B[2];
+                }
+            }
+        });
+        
         return F;
     }
 

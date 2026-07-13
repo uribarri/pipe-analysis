@@ -308,20 +308,38 @@ function render3DModel() {
             pipeGroup.add(cone1);
             pipeGroup.add(cone2);
             
-            // Valve Stem
-            const stemHeight = pipeRadius * 3.0;
-            const stemRadius = pipeRadius * 0.25;
-            const stem = new THREE.Mesh(new THREE.CylinderGeometry(stemRadius, stemRadius, stemHeight, 8), valveMat);
-            stem.position.copy(midPoint).y += (coneRadius + stemHeight/2.0);
-            pipeGroup.add(stem);
-            
-            // Handwheel
-            const wheelGeo = new THREE.TorusGeometry(pipeRadius * 1.2, pipeRadius * 0.15, 8, 24);
-            const handwheel = new THREE.Mesh(wheelGeo, new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.3 }));
-            handwheel.position.copy(stem.position);
-            handwheel.position.y += stemHeight/2.0;
-            handwheel.rotation.x = Math.PI / 2.0;
-            pipeGroup.add(handwheel);
+            // Valve Stem / Actuator
+            const offset = new THREE.Vector3((elem.actuator_ox || 0) / 12.0, (elem.actuator_oy || 0) / 12.0, (elem.actuator_oz || 0) / 12.0);
+            if (offset.lengthSq() > 0 && (elem.actuator_weight || 0) > 0) {
+                const actColor = 0xd97706; // Gold/Amber
+                const stemGeom = new THREE.CylinderGeometry(pipeRadius * 0.15, pipeRadius * 0.15, offset.length(), 8);
+                const stemMesh = new THREE.Mesh(stemGeom, new THREE.MeshStandardMaterial({ color: 0x9ca3af, roughness: 0.3 }));
+                stemMesh.position.copy(midPoint).addScaledVector(offset, 0.5);
+                stemMesh.quaternion.setFromUnitVectors(up, offset.clone().normalize());
+                pipeGroup.add(stemMesh);
+                
+                const boxSize = pipeRadius * 1.5;
+                const actGeom = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
+                const actMat = new THREE.MeshStandardMaterial({ color: actColor, roughness: 0.2, metalness: 0.8 });
+                const actMesh = new THREE.Mesh(actGeom, actMat);
+                actMesh.position.copy(midPoint).add(offset);
+                pipeGroup.add(actMesh);
+            } else {
+                // Valve Stem
+                const stemHeight = pipeRadius * 3.0;
+                const stemRadius = pipeRadius * 0.25;
+                const stem = new THREE.Mesh(new THREE.CylinderGeometry(stemRadius, stemRadius, stemHeight, 8), valveMat);
+                stem.position.copy(midPoint).y += (coneRadius + stemHeight/2.0);
+                pipeGroup.add(stem);
+                
+                // Handwheel
+                const wheelGeo = new THREE.TorusGeometry(pipeRadius * 1.2, pipeRadius * 0.15, 8, 24);
+                const handwheel = new THREE.Mesh(wheelGeo, new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.3 }));
+                handwheel.position.copy(stem.position);
+                handwheel.position.y += stemHeight/2.0;
+                handwheel.rotation.x = Math.PI / 2.0;
+                pipeGroup.add(handwheel);
+            }
             
         } else if (elem.type === 'hose') {
             // Draw corrugated bellows
@@ -392,14 +410,29 @@ function render3DModel() {
             cone2.quaternion.setFromUnitVectors(up, dirNorm.clone().negate());
             pipeGroup.add(cone1); pipeGroup.add(cone2);
             
-            // Stem & Handwheel
-            const stem = new THREE.Mesh(new THREE.CylinderGeometry(pipeRadius * 0.25, pipeRadius * 0.25, pipeRadius * 3, 8), valveMat);
-            stem.position.copy(p).y += (pipeRadius * 1.6 + pipeRadius * 1.5);
-            pipeGroup.add(stem);
-            const wheel = new THREE.Mesh(new THREE.TorusGeometry(pipeRadius * 1.2, pipeRadius * 0.15, 8, 24), new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.3 }));
-            wheel.position.copy(stem.position).y += pipeRadius * 1.5;
-            wheel.rotation.x = Math.PI / 2.0;
-            pipeGroup.add(wheel);
+            // Stem & Handwheel / Actuator
+            const offset = new THREE.Vector3((elem.actuator_ox || 0) / 12.0, (elem.actuator_oy || 0) / 12.0, (elem.actuator_oz || 0) / 12.0);
+            if (offset.lengthSq() > 0 && (elem.actuator_weight || 0) > 0) {
+                const actColor = 0xd97706; // Gold/Amber
+                const stemGeom = new THREE.CylinderGeometry(pipeRadius * 0.15, pipeRadius * 0.15, offset.length(), 8);
+                const stemMesh = new THREE.Mesh(stemGeom, new THREE.MeshStandardMaterial({ color: 0x9ca3af, roughness: 0.3 }));
+                stemMesh.position.copy(p).addScaledVector(offset, 0.5);
+                stemMesh.quaternion.setFromUnitVectors(up, offset.clone().normalize());
+                pipeGroup.add(stemMesh);
+                
+                const boxSize = pipeRadius * 1.5;
+                const actMesh = new THREE.Mesh(new THREE.BoxGeometry(boxSize, boxSize, boxSize), new THREE.MeshStandardMaterial({ color: actColor, roughness: 0.2, metalness: 0.8 }));
+                actMesh.position.copy(p).add(offset);
+                pipeGroup.add(actMesh);
+            } else {
+                const stem = new THREE.Mesh(new THREE.CylinderGeometry(pipeRadius * 0.25, pipeRadius * 0.25, pipeRadius * 3, 8), valveMat);
+                stem.position.copy(p).y += (pipeRadius * 1.6 + pipeRadius * 1.5);
+                pipeGroup.add(stem);
+                const wheel = new THREE.Mesh(new THREE.TorusGeometry(pipeRadius * 1.2, pipeRadius * 0.15, 8, 24), new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.3 }));
+                wheel.position.copy(stem.position).y += pipeRadius * 1.5;
+                wheel.rotation.x = Math.PI / 2.0;
+                pipeGroup.add(wheel);
+            }
         }
     });
 
@@ -637,7 +670,12 @@ function rebuildInputTables() {
     modelState.elements.forEach(el => {
         let typeText = el.type;
         if (el.type === 'bend') typeText = `Bend (R=${el.bend_radius}in)`;
-        else if (el.type === 'valve') typeText = `Valve (${el.weight}lb)`;
+        else if (el.type === 'valve') {
+            typeText = `Valve (${el.weight}lb)`;
+            if (el.actuator_weight > 0) {
+                typeText += ` + Actuator (${el.actuator_weight}lb at [${el.actuator_ox},${el.actuator_oy},${el.actuator_oz}]in)`;
+            }
+        }
         else if (el.type === 'flange') typeText = `Flange (${el.weight}lb)`;
         else if (el.type === 'tee') typeText = `Tee (${el.weight}lb)`;
         else if (el.type === 'hose') typeText = `Hose (Ax=${el.k_ax} lb/in)`;
@@ -797,6 +835,12 @@ function addElement(e) {
         elem.bend_radius = parseFloat(document.getElementById('element-bend-radius').value);
     } else if (type === 'valve' || type === 'flange' || type === 'tee') {
         elem.weight = parseFloat(document.getElementById('element-weight').value) || 0.0;
+        if (type === 'valve') {
+            elem.actuator_weight = parseFloat(document.getElementById('element-actuator-weight').value) || 0.0;
+            elem.actuator_ox = parseFloat(document.getElementById('element-actuator-ox').value) || 0.0;
+            elem.actuator_oy = parseFloat(document.getElementById('element-actuator-oy').value) || 0.0;
+            elem.actuator_oz = parseFloat(document.getElementById('element-actuator-oz').value) || 0.0;
+        }
     } else if (type === 'hose') {
         elem.k_ax = parseFloat(document.getElementById('element-k-ax').value) || 1e7;
         elem.k_lat = parseFloat(document.getElementById('element-k-lat').value) || 1e5;
@@ -991,6 +1035,7 @@ function toggleElementFields() {
     let type = document.getElementById('element-type').value;
     document.getElementById('bend-radius-field').style.display = type === 'bend' ? 'block' : 'none';
     document.getElementById('element-weight-field').style.display = (type === 'valve' || type === 'flange' || type === 'tee') ? 'block' : 'none';
+    document.getElementById('element-actuator-fields').style.display = type === 'valve' ? 'block' : 'none';
     document.getElementById('element-hose-fields').style.display = type === 'hose' ? 'block' : 'none';
 }
 
@@ -1042,6 +1087,12 @@ function runAnalysis() {
                 elem.bend_radius = elem.bend_radius * 0.0254;
             } else if (elem.type === 'valve' || elem.type === 'flange' || elem.type === 'tee') {
                 elem.weight = elem.weight * 0.45359237;
+                if (elem.type === 'valve') {
+                    elem.actuator_weight = (elem.actuator_weight || 0.0) * 0.45359237;
+                    elem.actuator_ox = (elem.actuator_ox || 0.0) * 0.0254;
+                    elem.actuator_oy = (elem.actuator_oy || 0.0) * 0.0254;
+                    elem.actuator_oz = (elem.actuator_oz || 0.0) * 0.0254;
+                }
             } else if (elem.type === 'hose') {
                 elem.k_ax = elem.k_ax * 175.1268;
                 elem.k_lat = elem.k_lat * 175.1268;
